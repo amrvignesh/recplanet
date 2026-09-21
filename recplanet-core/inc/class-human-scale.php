@@ -19,22 +19,28 @@ class Human_Scale {
 		if ( null === $acres || $acres <= 0 ) {
 			return '';
 		}
-		if ( $acres < 13.2 ) {                       // up to ten fields: use fractions
-			return 'about ' . self::fraction_words( $acres / self::FOOTBALL_FIELD ) . ' football field' . ( $acres / self::FOOTBALL_FIELD >= 1.75 ? 's' : '' );
+		// Football fields up to about ten of them, as words; then counted; then Central Parks; then Yellowstones.
+		$fields = $acres / self::FOOTBALL_FIELD;
+		if ( $fields < 10 ) {
+			return 'about ' . self::fraction_words( $fields ) . ' football ' . self::plural( 'field', $fields );
 		}
 		if ( $acres < self::CENTRAL_PARK ) {
-			return 'about ' . self::round_words( $acres / self::FOOTBALL_FIELD ) . ' football fields';
+			return 'about ' . self::round_words( $fields ) . ' football fields';
 		}
-		if ( $acres < self::MANHATTAN * 2 ) {
-			return 'about ' . self::fraction_words( $acres / self::CENTRAL_PARK ) . ' Central Park' . ( $acres / self::CENTRAL_PARK >= 1.75 ? 's' : '' );
+		$parks = $acres / self::CENTRAL_PARK;
+		if ( $parks < 10 ) {
+			return 'about ' . self::fraction_words( $parks ) . ' Central ' . self::plural( 'Park', $parks );
 		}
-		if ( $acres < self::RHODE_ISLAND * 2 ) {
-			return 'about ' . self::round_words( $acres / self::CENTRAL_PARK ) . ' Central Parks';
+		if ( $acres < self::YELLOWSTONE * 1.5 ) {
+			return 'about ' . self::round_words( $parks ) . ' Central Parks';   // Yellowstone itself: about 2,600
 		}
-		if ( $acres < self::YELLOWSTONE * 2 ) {
-			return 'about ' . self::fraction_words( $acres / self::RHODE_ISLAND ) . ' Rhode Island' . ( $acres / self::RHODE_ISLAND >= 1.75 ? 's' : '' );
-		}
-		return 'about ' . self::round_words( $acres / self::YELLOWSTONE ) . ' Yellowstones';
+		$ys = $acres / self::YELLOWSTONE;
+		return 'about ' . ( $ys < 10 ? self::fraction_words( $ys ) : self::round_words( $ys ) ) . ' ' . self::plural( 'Yellowstone', $ys );
+	}
+
+	/** Singular only for exactly one; "one and a third fields" is plural. */
+	private static function plural( string $word, float $n ): string {
+		return ( abs( $n - 1 ) < 0.125 ) ? $word : $word . 's';
 	}
 
 	/** 1.33 -> "one and a third"; 2.5 -> "two and a half"; 0.5 -> "half a". */

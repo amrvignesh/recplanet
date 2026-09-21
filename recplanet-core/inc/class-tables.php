@@ -94,11 +94,11 @@ class Tables {
 			PRIMARY KEY  (old_path)
 		) $charset;" );
 
-		// Spatial column and index, added outside dbDelta because dbDelta does not understand them.
+		// A POINT column is kept for engines that allow a SPATIAL index; WordPress.com's database refuses the
+		// index, so every map query uses the plain lat/lng indexes and the column is informational only.
 		$col = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = %s AND column_name = 'pt'", table( 'park_index' ) ) );
 		if ( ! $col ) {
 			$wpdb->query( "ALTER TABLE " . table( 'park_index' ) . " ADD COLUMN pt POINT NULL" );
-			$wpdb->query( "ALTER TABLE " . table( 'park_index' ) . " ADD SPATIAL INDEX pt (pt)" ); // fails quietly if the engine can't
 		}
 
 		update_option( 'rp_schema_version', self::SCHEMA_VERSION );
