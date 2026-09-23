@@ -50,6 +50,12 @@ class Rewrites {
 		$country = strtolower( (string) get_post_meta( $post->ID, 'rp_country', true ) ) ?: 'us';
 		$state   = strtolower( (string) get_post_meta( $post->ID, 'rp_state', true ) );
 		$city    = legacy_slug( (string) get_post_meta( $post->ID, 'rp_city', true ) );
+		// The old site's own path, kept exactly, when it has the shape the router expects. Slugs that WordPress had
+		// to make unique (hillside-park-10) never reach the address bar; the old path is the canonical URL.
+		$legacy = (string) get_post_meta( $post->ID, 'rp_legacy_path', true );
+		if ( 'us' === $country && $state && '' !== $legacy && preg_match( '#^' . preg_quote( $state, '#' ) . '/(?:' . preg_quote( $city, '#' ) . '/)?[^/]+$#', $legacy ) && ! preg_match( '#/(page|county)/#', '/' . $legacy . '/' ) ) {
+			return user_trailingslashit( home_url( '/' . $legacy ) );
+		}
 		if ( 'us' === $country && $state && $city ) {
 			return user_trailingslashit( home_url( "/$state/$city/{$post->post_name}" ) );
 		}
@@ -115,6 +121,10 @@ class Rewrites {
 			if ( 'city' === $level && ! $filter ) {
 				$park = get_posts( [ 'post_type' => POST_PARK, 'name' => (string) $q->get( 'rp_city' ), 'post_status' => 'publish', 'posts_per_page' => 1,
 					'meta_query' => [ [ 'key' => 'rp_state', 'value' => strtoupper( (string) $q->get( 'rp_state' ) ) ] ] ] );
+				if ( ! $park ) {
+					$id   = self::park_by_path( strtolower( (string) $q->get( 'rp_state' ) ) . '/' . $q->get( 'rp_city' ) );
+					$park = $id ? [ get_post( $id ) ] : [];
+				}
 				if ( $park ) {
 					$q->set( 'rp_place_level', '' );
 					$q->set( 'post_type', POST_PARK );
@@ -130,9 +140,16 @@ class Rewrites {
 		}
 		// /{state}/{city}/{slug}: a park; or, when no park has that slug, the city narrowed to a facility or activity.
 		if ( POST_PARK === $q->get( 'post_type' ) && $q->get( 'name' ) && ( $q->get( 'rp_state' ) || $q->get( 'rp_country' ) ) ) {
-			if ( $q->get( 'rp_state' ) && $q->get( 'rp_city' ) ) {
+			if ( $q->get( 'rp_state' ) && $q->get( 'rp_city' ) && ! self::park_exists( (string) $q->get( 'name' ), (string) $q->get( 'rp_state' ) ) ) {
+				// The old site's path for a park whose slug WordPress had to make unique.
+				$id = self::park_by_path( strtolower( (string) $q->get( 'rp_state' ) ) . '/' . $q->get( 'rp_city' ) . '/' . $q->get( 'name' ) );
+				if ( $id ) {
+					$q->set( 'name', '' );
+					$q->set( 'p', $id );
+					return;
+				}
 				$f = self::filter_term( (string) $q->get( 'name' ) );
-				if ( $f && ! self::park_exists( (string) $q->get( 'name' ), (string) $q->get( 'rp_state' ) ) ) {
+				if ( $f ) {
 					$term = self::find_place( 'city', 'us', (string) $q->get( 'rp_state' ), '', (string) $q->get( 'rp_city' ) );
 					if ( $term ) {
 						$q->set( 'name', '' );
@@ -186,6 +203,12 @@ class Rewrites {
 			}
 		}
 		return null;
+	}
+
+	/** A published park by the path it had on the old site. */
+	public static function park_by_path( string $path ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'rp_legacy_path' WHERE m.meta_value = %s AND p.post_type = %s AND p.post_status = 'publish' LIMIT 1", trim( $path, '/' ), POST_PARK ) );
 	}
 
 	private static function park_exists( string $slug, string $state ): bool {

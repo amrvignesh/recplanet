@@ -73,7 +73,8 @@ class Import_Command {
 			case 'photos':    $this->photos( $assoc ); break;
 			case 'blogs':     $this->blogs( $assoc ); break;
 			case 'redirects': $this->redirects( $assoc ); break;
-			default: WP_CLI::error( 'Say what to import: parks, photos, blogs or redirects.' );
+			case 'parkpaths': $this->parkpaths(); break;
+			default: WP_CLI::error( 'Say what to import: parks, photos, blogs, redirects or parkpaths.' );
 		}
 		WP_CLI::success( wp_json_encode( $this->stats ) );
 	}
@@ -452,6 +453,28 @@ class Import_Command {
 			Rewrites::add_redirect( $r->dst, $target, 'node' );
 			$this->stats['node_redirects'] = ( $this->stats['node_redirects'] ?? 0 ) + 1;
 		}
+	}
+
+	/** Park redirects, rebuilt: only the old paths that differ from the park's URL today need a row. */
+	private function parkpaths(): void {
+		global $wpdb;
+		$wpdb->delete( table( 'redirects' ), [ 'kind' => 'park' ] );
+		wp_suspend_cache_addition( true );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT m.post_id, m.meta_value AS path FROM {$wpdb->postmeta} m JOIN {$wpdb->posts} p ON p.ID = m.post_id AND p.post_type = %s AND p.post_status = 'publish' WHERE m.meta_key = 'rp_legacy_path' AND m.meta_value <> ''", POST_PARK ) );
+		$n = 0;
+		foreach ( $rows as $r ) {
+			$new = (string) wp_parse_url( get_permalink( (int) $r->post_id ), PHP_URL_PATH );
+			if ( trim( $new, '/' ) !== trim( $r->path, '/' ) ) {
+				Rewrites::add_redirect( $r->path, $new, 'park' );
+				$this->stats['park_redirects'] = ( $this->stats['park_redirects'] ?? 0 ) + 1;
+			} else {
+				$this->stats['park_paths_kept'] = ( $this->stats['park_paths_kept'] ?? 0 ) + 1;
+			}
+			if ( 0 === ++$n % 500 ) {
+				Index::free_memory();
+			}
+		}
+		wp_suspend_cache_addition( false );
 	}
 
 	private string $tag_kind = '';
