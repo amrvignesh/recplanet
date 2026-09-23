@@ -55,42 +55,75 @@ class Taxonomies {
 	}
 
 	/**
-	 * Find or create the place chain country > state > county > city and return the leaf term id.
+	 * The place terms a park belongs to: its city (or county, or state when nothing finer is known), plus its
+	 * county as a second term when it has both. Cities sit under their county when the record names one,
+	 * otherwise directly under the state; a city is found under either, so one city is one term.
 	 * Codes are kept in term meta so the chain can be rebuilt from Drupal's location rows.
 	 */
-	public static function place_term( string $country, string $state = '', string $county = '', string $city = '' ): int {
-		$parent = 0;
-		$chain  = [
-			[ 'country', strtolower( $country ), self::country_name( $country ) ],
-			[ 'state', strtoupper( $state ), self::state_name( $country, $state ) ],
-			[ 'county', $county, $county ],
-			[ 'city', $city, $city ],
-		];
-		foreach ( $chain as [ $level, $code, $name ] ) {
-			if ( '' === $code ) {
-				break;
-			}
-			$slug = ( 'country' === $level ) ? $code : ( 'state' === $level ? strtolower( $code ) : legacy_slug( $name ) );
-			// Looked up by name under the parent: WordPress keeps term slugs unique across the whole taxonomy, so the
-			// second Springfield gets a slug like springfield-union-county and a slug lookup would miss it.
-			$term = get_terms( [ 'taxonomy' => TAX_PLACE, 'name' => $name, 'parent' => $parent, 'hide_empty' => false, 'number' => 1 ] );
-			if ( $term && ! is_wp_error( $term ) ) {
-				$parent = $term[0]->term_id;
-				if ( '' === (string) get_term_meta( $parent, 'rp_slug', true ) ) {
-					update_term_meta( $parent, 'rp_slug', $slug );
-				}
+	public static function place_terms( string $country, string $state = '', string $county = '', string $city = '' ): array {
+		$country = strtolower( $country ) ?: 'us';
+		$cid     = self::find_or_create( self::country_name( $country ), $country, 0, 'country', $country );
+		if ( ! $cid ) {
+			return [];
+		}
+		$state = strtoupper( trim( $state ) );
+		if ( '' === $state ) {
+			return [ $cid ];
+		}
+		$sid = self::find_or_create( self::state_name( $country, $state ), strtolower( $state ), $cid, 'state', $state );
+		if ( ! $sid ) {
+			return [ $cid ];
+		}
+		$county   = trim( $county );
+		$city     = trim( $city );
+		$county_id = '' !== $county ? self::find_or_create( $county, legacy_slug( $county ), $sid, 'county', $county ) : 0;
+		if ( '' === $city ) {
+			return [ $county_id ?: $sid ];
+		}
+		$city_id = 0;
+		foreach ( get_terms( [ 'taxonomy' => TAX_PLACE, 'name' => $city, 'hide_empty' => false ] ) ?: [] as $t ) {
+			if ( ! $t instanceof \WP_Term ) {
 				continue;
 			}
-			$r = wp_insert_term( $name, TAX_PLACE, [ 'slug' => $slug, 'parent' => $parent ] );
-			if ( is_wp_error( $r ) ) {
-				return $parent;
+			$p = $t->parent ? get_term( $t->parent, TAX_PLACE ) : null;
+			if ( $t->parent === $sid || ( $p instanceof \WP_Term && $p->parent === $sid ) ) {
+				$city_id = $t->term_id;
+				break;
 			}
-			$parent = $r['term_id'];
-			update_term_meta( $parent, 'rp_level', $level );
-			update_term_meta( $parent, 'rp_code', $code );
-			update_term_meta( $parent, 'rp_slug', $slug );     // the URL segment, which may differ from the term's own slug
 		}
-		return $parent;
+		if ( ! $city_id ) {
+			$city_id = self::find_or_create( $city, legacy_slug( $city ), $county_id ?: $sid, 'city', $city );
+		}
+		$out = [ $city_id ?: $county_id ?: $sid ];
+		if ( $city_id && $county_id ) {
+			$out[] = $county_id;
+		}
+		return $out;
+	}
+
+	/** The leaf place term for a park. */
+	public static function place_term( string $country, string $state = '', string $county = '', string $city = '' ): int {
+		return (int) ( self::place_terms( $country, $state, $county, $city )[0] ?? 0 );
+	}
+
+	/** A place term by name under a parent, created when missing. Term slugs are unique site-wide, so the URL segment lives in meta. */
+	private static function find_or_create( string $name, string $slug, int $parent, string $level, string $code ): int {
+		$term = get_terms( [ 'taxonomy' => TAX_PLACE, 'name' => $name, 'parent' => $parent, 'hide_empty' => false, 'number' => 1 ] );
+		if ( $term && ! is_wp_error( $term ) ) {
+			$id = $term[0]->term_id;
+			if ( '' === (string) get_term_meta( $id, 'rp_slug', true ) ) {
+				update_term_meta( $id, 'rp_slug', $slug );
+			}
+			return $id;
+		}
+		$r = wp_insert_term( $name, TAX_PLACE, [ 'slug' => $slug, 'parent' => $parent ] );
+		if ( is_wp_error( $r ) ) {
+			return 0;
+		}
+		update_term_meta( $r['term_id'], 'rp_level', $level );
+		update_term_meta( $r['term_id'], 'rp_code', $code );
+		update_term_meta( $r['term_id'], 'rp_slug', $slug );
+		return (int) $r['term_id'];
 	}
 
 	/** Find or create the steward chain level > name and return the name term id. */

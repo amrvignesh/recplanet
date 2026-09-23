@@ -128,7 +128,16 @@ function rp_place_stats( WP_Term $t, ?WP_Term $filter = null ): array {
 /** Find a place term from a park's meta. */
 function rp_park_place_term( int $park_id ): ?WP_Term {
 	$terms = wp_get_object_terms( $park_id, 'rp_place' );
-	return ( $terms && ! is_wp_error( $terms ) ) ? $terms[0] : null;
+	if ( ! $terms || is_wp_error( $terms ) ) {
+		return null;
+	}
+	// A park with a city and a county carries both; the city is the finer one.
+	foreach ( $terms as $t ) {
+		if ( 'city' === get_term_meta( $t->term_id, 'rp_level', true ) ) {
+			return $t;
+		}
+	}
+	return $terms[0];
 }
 
 /** Photos pinned to a park. */

@@ -187,9 +187,9 @@ class Import_Command {
 			wp_set_object_terms( $id, array_values( array_intersect( array_map( 'trim', $acts ), ACTIVITIES ) ), TAX_ACTIVITY );
 			wp_set_object_terms( $id, $facilities, TAX_FACILITY );
 			wp_set_object_terms( $id, [ Taxonomies::steward_term( $level, $owner ) ], TAX_STEWARD );
-			$place = Taxonomies::place_term( $country, $state, $county, $city );
+			$place = Taxonomies::place_terms( $country, $state, $county, $city );
 			if ( $place ) {
-				wp_set_object_terms( $id, [ $place ], TAX_PLACE );
+				wp_set_object_terms( $id, $place, TAX_PLACE );
 			}
 			if ( ! $acts ) {
 				$sugg = $this->suggest_activities( $tags, (string) $n->body );
@@ -675,10 +675,14 @@ class Import_Command {
 		$bar   = \WP_CLI\Utils\make_progress_bar( 'Places', $limit ?: count( $ids ) );
 		foreach ( $ids as $id ) {
 			$id    = (int) $id;
-			$place = Taxonomies::place_term( (string) get_post_meta( $id, 'rp_country', true ) ?: 'us', (string) get_post_meta( $id, 'rp_state', true ), (string) get_post_meta( $id, 'rp_county', true ), (string) get_post_meta( $id, 'rp_city', true ) );
+			$place = Taxonomies::place_terms( (string) get_post_meta( $id, 'rp_country', true ) ?: 'us', (string) get_post_meta( $id, 'rp_state', true ), (string) get_post_meta( $id, 'rp_county', true ), (string) get_post_meta( $id, 'rp_city', true ) );
 			$cur   = wp_get_object_terms( $id, TAX_PLACE, [ 'fields' => 'ids' ] );
-			if ( $place && ( ! is_array( $cur ) || [ $place ] !== array_map( 'intval', $cur ) ) ) {
-				wp_set_object_terms( $id, [ $place ], TAX_PLACE );
+			$cur   = is_array( $cur ) ? array_map( 'intval', $cur ) : [];
+			sort( $cur );
+			$want = $place;
+			sort( $want );
+			if ( $place && $want !== $cur ) {
+				wp_set_object_terms( $id, $place, TAX_PLACE );
 				$moved++;
 			}
 			$bar->tick();

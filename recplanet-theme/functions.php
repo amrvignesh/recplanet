@@ -24,9 +24,25 @@ add_action( 'after_setup_theme', function () {
 	register_nav_menus( [ 'primary' => 'Primary', 'footer-explore' => 'Footer: explore', 'footer-take-part' => 'Footer: take part', 'footer-about' => 'Footer: about' ] );
 } );
 
+/** The web-font stylesheet loads without blocking the first paint: fetched as print, switched to all once it lands. */
+add_filter( 'style_loader_tag', function ( string $tag, string $handle ): string {
+	if ( 'rp-fonts' !== $handle ) {
+		return $tag;
+	}
+	$async = str_replace( "media='all'", "media='print' onload=\"this.media='all'\"", $tag );
+	if ( $async === $tag ) {
+		$async = str_replace( 'media="all"', 'media="print" onload="this.media=\'all\'"', $tag );
+	}
+	return $async . '<noscript>' . $tag . '</noscript>';
+}, 10, 2 );
+
+add_action( 'wp_head', function () {
+	echo '<link rel="preconnect" href="https://fonts-api.wp.com" crossorigin>' . "\n" . '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
+}, 1 );
+
 add_action( 'wp_enqueue_scripts', function () {
 	wp_enqueue_style( 'rp-fonts', 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Caveat:wght@600&display=swap', [], null );
-	wp_enqueue_style( 'rp-main', RP_THEME_URI . '/assets/css/main.css', [ 'rp-fonts' ], RP_THEME_VERSION );
+	wp_enqueue_style( 'rp-main', RP_THEME_URI . '/assets/css/main.css', [], RP_THEME_VERSION );
 	wp_enqueue_script( 'rp-main', RP_THEME_URI . '/assets/js/main.js', [], RP_THEME_VERSION, [ 'in_footer' => true, 'strategy' => 'defer' ] );
 	wp_localize_script( 'rp-main', 'RP', [
 		'rest'    => esc_url_raw( rest_url( 'recplanet/v1/' ) ),

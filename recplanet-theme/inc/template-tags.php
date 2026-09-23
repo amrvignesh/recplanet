@@ -6,7 +6,8 @@
 defined( 'ABSPATH' ) || exit;
 
 function rp_logo( string $class = '' ): string {
-	return '<img class="' . esc_attr( $class ) . '" src="' . esc_url( RP_THEME_URI . '/assets/img/logo.png' ) . '" alt="RecPlanet" width="297" height="98">';
+	return '<picture><source type="image/webp" srcset="' . esc_url( RP_THEME_URI . '/assets/img/logo.webp' ) . '">'
+		. '<img class="' . esc_attr( $class ) . '" src="' . esc_url( RP_THEME_URI . '/assets/img/logo.png' ) . '" alt="RecPlanet" width="297" height="98" fetchpriority="high" decoding="async"></picture>';
 }
 
 /** First sentence or two of a park's description, plain text. */
