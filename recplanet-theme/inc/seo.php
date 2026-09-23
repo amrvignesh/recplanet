@@ -32,11 +32,11 @@ function rp_seo_context(): array {
 		$level = get_term_meta( $t->term_id, 'rp_level', true );
 		$where = 'city' === $level || 'county' === $level ? $t->name . ', ' . ( $chain['terms']['state']->name ?? '' ) : $t->name;
 		if ( $f ) {
-			$c['title']     = rp_filter_label( $f ) . ' in ' . $where . ': ' . number_format( $s['count'] ) . ' places';
-			$c['desc']      = number_format( $s['count'] ) . ' ' . rp_filter_phrase( $f ) . ' in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, each one checked by a person.';
+			$c['title']     = rp_filter_label( $f ) . ' in ' . $where . ': ' . rp_count( $s['count'], 'place', 'places' );
+			$c['desc']      = number_format( $s['count'] ) . ' ' . rp_filter_phrase( $f, $s['count'] ) . ' in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, each one checked by a person.';
 			$c['canonical'] = rp_place_url( $t, $f );
 		} else {
-			$c['title']     = $where . ': ' . number_format( $s['count'] ) . ' parks and public lands';
+			$c['title']     = $where . ': ' . ( 1 === $s['count'] ? '1 park or public land' : number_format( $s['count'] ) . ' parks and public lands' );
 			$c['desc']      = number_format( $s['count'] ) . ' parks, trails and public places in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, with what you can do at each one. Checked by a person, not scraped.';
 			$c['canonical'] = get_term_link( $t );
 		}
@@ -45,13 +45,13 @@ function rp_seo_context(): array {
 		$t = get_queried_object();
 		$n = number_format( $t->count );
 		if ( 'rp_activity' === $t->taxonomy ) {
-			$c['title'] = 'Where to ' . rp_activity_verb( $t->name ) . ': ' . $n . ' places';
+			$c['title'] = 'Where to ' . rp_activity_verb( $t->name ) . ': ' . rp_count( (int) $t->count, 'place', 'places' );
 			$c['desc']  = $n . ' parks and public lands where you can ' . rp_activity_verb( $t->name ) . ', by state and city, each one checked by a person.';
 		} elseif ( 'rp_facility' === $t->taxonomy ) {
-			$c['title'] = ucfirst( $t->name ) . ': ' . $n . ' places';
+			$c['title'] = ucfirst( $t->name ) . ': ' . rp_count( (int) $t->count, 'place', 'places' );
 			$c['desc']  = $n . ' places with ' . $t->name . ', by state and city, each one checked by a person.';
 		} else {
-			$c['title'] = 'Managed by ' . $t->name . ': ' . $n . ' places';
+			$c['title'] = 'Managed by ' . $t->name . ': ' . rp_count( (int) $t->count, 'place', 'places' );
 			$c['desc']  = $n . ' parks and public lands managed by ' . $t->name . ', with acreage and activities for each.';
 		}
 		$c['canonical'] = get_term_link( $t );

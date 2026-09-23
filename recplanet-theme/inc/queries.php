@@ -73,8 +73,13 @@ function rp_filter_label( WP_Term $f ): string {
 }
 
 /** "places with picnic areas" / "places for fishing". */
-function rp_filter_phrase( WP_Term $f ): string {
-	return ( 'rp_activity' === $f->taxonomy ? 'places for ' : 'places with ' ) . strtolower( $f->name );
+function rp_filter_phrase( WP_Term $f, int $n = 2 ): string {
+	return ( 1 === $n ? 'place' : 'places' ) . ( 'rp_activity' === $f->taxonomy ? ' for ' : ' with ' ) . strtolower( $f->name );
+}
+
+/** "1 place", "12 places". */
+function rp_count( int $n, string $one, string $many ): string {
+	return number_format( $n ) . ' ' . ( 1 === $n ? $one : $many );
 }
 
 function rp_place_where_base( WP_Term $t ): array {

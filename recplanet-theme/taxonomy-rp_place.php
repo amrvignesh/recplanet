@@ -20,7 +20,7 @@ $chain   = rp_place_chain( $t );
 $labels  = [ 'country' => 'Country', 'state' => 'State', 'county' => 'County', 'city' => 'City' ];
 $parent  = $t->parent ? get_term( $t->parent, 'rp_place' ) : null;
 $lead    = sprintf( '%s %s across %s acres%s. %s',
-	number_format( $stats['count'] ), $filter ? rp_filter_phrase( $filter ) . ' in ' . $t->name . ( $parent ? ', ' . $parent->name : '' ) : 'public places on file', RP\format_acres( $stats['acres'], 0 ),
+	number_format( $stats['count'] ), $filter ? rp_filter_phrase( $filter, $stats['count'] ) . ' in ' . $t->name . ( $parent ? ', ' . $parent->name : '' ) : ( 1 === $stats['count'] ? 'public place on file' : 'public places on file' ), RP\format_acres( $stats['acres'], 0 ),
 	$largest ? ', from ' . $largest[0]->title . ' at ' . RP\format_acres( (float) $largest[0]->acres, 0 ) . ' acres down' : '',
 	$acts ? ucfirst( strtolower( array_key_first( $acts ) ) ) . ' is the most common activity, at ' . number_format( reset( $acts ) ) . ' places. ' : '' ) . 'Every one was checked by a person.';
 ?>
