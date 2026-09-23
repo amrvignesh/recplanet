@@ -50,10 +50,10 @@ class Rewrites {
 		$country = strtolower( (string) get_post_meta( $post->ID, 'rp_country', true ) ) ?: 'us';
 		$state   = strtolower( (string) get_post_meta( $post->ID, 'rp_state', true ) );
 		$city    = legacy_slug( (string) get_post_meta( $post->ID, 'rp_city', true ) );
-		// The old site's own path, kept exactly, when it has the shape the router expects. Slugs that WordPress had
+		// The old site's own path, kept exactly, when it starts with the state (the city segment may differ from today's name: bronx, the-bronx). Slugs that WordPress had
 		// to make unique (hillside-park-10) never reach the address bar; the old path is the canonical URL.
 		$legacy = (string) get_post_meta( $post->ID, 'rp_legacy_path', true );
-		if ( 'us' === $country && $state && '' !== $legacy && preg_match( '#^' . preg_quote( $state, '#' ) . '/(?:' . preg_quote( $city, '#' ) . '/)?[^/]+$#', $legacy ) && ! preg_match( '#/(page|county)/#', '/' . $legacy . '/' ) ) {
+		if ( 'us' === $country && $state && '' !== $legacy && preg_match( '#^' . preg_quote( $state, '#' ) . '/(?:[^/]+/)?[^/]+$#', $legacy ) && ! preg_match( '#/(page|county)/#', '/' . $legacy . '/' ) ) {
 			return user_trailingslashit( home_url( '/' . $legacy ) );
 		}
 		if ( 'us' === $country && $state && $city ) {
