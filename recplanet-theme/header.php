@@ -48,10 +48,12 @@ $rp_here   = fn( string $slug ) => is_page( $slug ) ? ' aria-current="page" clas
       </div>
       <a href="<?php echo esc_url( home_url( '/contest/' ) ); ?>"<?php echo is_post_type_archive( 'rp_contest' ) || is_singular( [ 'rp_contest', 'rp_photo' ] ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="16" height="11" rx="2"/><path d="M7 6l1.5-2.5h3L13 6"/><circle cx="10" cy="11.5" r="3"/></svg><span class="lbl">Photo Contest</span></a>
       <a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>"<?php echo is_home() || is_singular( 'post' ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h9l3 3v11H4z"/><path d="M7 9h6M7 12h6M7 15h4"/></svg><span class="lbl">Blog</span></a>
-      <a class="dice" href="<?php echo esc_url( home_url( '/random/' ) ); ?>" title="Take me to a random place"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="13" r="1.3" fill="#fff" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="7" cy="13" r="1.3" fill="#fff" stroke="none"/></svg><span class="lbl">Surprise Me</span></a>
       <div class="menu-mobile-extra">
         <?php if ( ! is_front_page() ) : ?><a href="<?php echo esc_url( home_url( '/' ) ); ?>">Home</a><?php endif; ?>
+        <a href="<?php echo esc_url( home_url( '/acre-counter/' ) ); ?>">Acre Counter</a>
         <a href="<?php echo esc_url( home_url( '/about-us/' ) ); ?>">About</a>
+        <a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>">Contact</a>
+        <?php if ( ! is_user_logged_in() ) : ?><a href="<?php echo esc_url( wp_login_url() ); ?>">Sign in</a><?php endif; ?>
       </div>
     </nav>
     <?php if ( ! is_front_page() ) : ?>
@@ -69,6 +71,6 @@ $rp_here   = fn( string $slug ) => is_page( $slug ) ? ' aria-current="page" clas
   <a href="<?php echo esc_url( home_url( '/states/' ) ); ?>"<?php echo $rp_here( 'states' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l6-2 6 2 4-1v11l-4 1-6-2-6 2z"/><path d="M8 3v11M14 5v11"/></svg><span>States</span></a>
   <a href="<?php echo esc_url( home_url( '/activities/' ) ); ?>"<?php echo $rp_here( 'activities' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="12" cy="3.5" r="1.8"/><path d="M9 6l-3 8M9 6l5 3v6M9 6l-4 3M10 12l-3 6"/></svg><span>Activities</span></a>
   <a href="<?php echo esc_url( home_url( '/contest/' ) ); ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="16" height="11" rx="2"/><path d="M7 6l1.5-2.5h3L13 6"/><circle cx="10" cy="11.5" r="3"/></svg><span>Contest</span></a>
-  <a href="<?php echo esc_url( home_url( '/random/' ) ); ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r="1.3"/><circle cx="13" cy="13" r="1.3"/><circle cx="10" cy="10" r="1.3"/></svg><span>Surprise</span></a>
+  <a href="<?php echo esc_url( home_url( '/world/' ) ); ?>"<?php echo $rp_here( 'world' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2c3 3 3 13 0 16M10 2c-3 3-3 13 0 16"/></svg><span>World</span></a>
 </nav>
 <main id="main">

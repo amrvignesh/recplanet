@@ -252,8 +252,11 @@ class Rewrites {
 			case 'united-states': return '/states/';
 			case 'world-parks':   return '/world/';
 			case 'photocontest':  return '/contest/';
-			case 'acreage':       return '/';
-			case 'blogtags':
+			case 'acreage':       return '/acre-counter/';
+			case 'map/node':      return '/atlas/';
+			case 'contact-us':
+			case 'contact':       return '/contact/';
+			case 'blogtags':      return '/blog-tags/';
 			case 'blog':          return '/blog/';
 			case 'forum':         return '/';
 			case 'about-us':      return '/about-us/';

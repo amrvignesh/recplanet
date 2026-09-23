@@ -46,7 +46,7 @@ $dec   = (int) round( ( $head['acres'] - $whole ) * 100 );
     </div>
     <div class="hero-cta">
       <a class="btn btn-orange" href="<?php echo esc_url( home_url( '/atlas' ) ); ?>">Find fun near me</a>
-      <a class="btn btn-white" href="#ledger">See it grow</a>
+      <a class="btn btn-white" href="<?php echo esc_url( home_url( '/random/' ) ); ?>">Surprise me</a>
     </div>
   </div>
 </header>

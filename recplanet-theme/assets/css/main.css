@@ -523,3 +523,13 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
   .bar .menu-search input{flex:1;font-family:inherit;font-size:16px;padding:11px 14px;border-radius:999px;border:0;background:rgba(255,255,255,.95);color:var(--ink);min-height:44px}
   .bar .menu-search button{min-width:44px;border-radius:999px;border:0;background:var(--orange);color:#fff;cursor:pointer}
 }
+
+/* ---- acre counter page, tag cloud ---- */
+.counter-card{background:#14211A;color:#fff;border-radius:22px;padding:34px 36px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+.counter-card .counter{text-shadow:none}
+.counter-card .counter .big{font-size:clamp(34px,6vw,76px)}
+.counter-form{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;justify-content:center;margin-top:8px}
+.counter-form label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:#C6D2C0;text-align:left}
+.counter-form select{font-family:inherit;font-size:15px;padding:11px 14px;border-radius:10px;border:0;background:#fff;color:var(--ink);min-width:220px;min-height:44px}
+.prow.total{background:var(--bg-2);font-weight:800}
+.tagcloud{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
