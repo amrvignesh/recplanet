@@ -43,13 +43,24 @@ class Import_Command {
 	 * Import one content type from the Drupal tables.
 	 *
 	 * ## OPTIONS
+	 *
 	 * <what>
-	 * : parks | photos | blogs | redirects
+	 * : What to import: parks, photos, blogs or redirects.
+	 *
 	 * [--prefix=<prefix>]
+	 * : Prefix the Drupal tables were loaded under. Default d6_.
+	 *
 	 * [--since=<date>]
+	 * : Only nodes changed on or after this date, for delta runs.
+	 *
 	 * [--limit=<n>]
+	 * : Stop after this many nodes. For trial runs.
+	 *
 	 * [--dry-run]
+	 * : Count what would be created or updated without writing.
+	 *
 	 * [--files=<path>]
+	 * : Absolute path of the copied sites/default/files folder, for images.
 	 */
 	public function import( array $args, array $assoc ): void {
 		$this->p = $assoc['prefix'] ?? 'd6_';
@@ -451,8 +462,12 @@ class Import_Command {
 	 * Apply activity suggestions in bulk.
 	 *
 	 * ## OPTIONS
+	 *
 	 * [--all]
+	 * : Apply every pending suggestion.
+	 *
 	 * [--activity=<name>]
+	 * : Apply only suggestions for this activity, e.g. Hunting.
 	 */
 	public function approve( array $args, array $assoc ): void {
 		global $wpdb;
