@@ -195,7 +195,8 @@ section{padding-block:clamp(48px,6vw,84px)}
 .contrib .wrap{display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap;position:relative;z-index:2}
 .contrib h2{max-width:22ch}
 .contrib p{color:#EEF8DA;max-width:50ch}
-footer{background:var(--ink-2);color:#C6D2C0;padding-block:40px}
+/* The footer keeps its own dark colour in light and dark mode; the tokens flip in dark mode and would turn it pale. */
+footer{background:#293433;color:#C6D2C0;padding-block:40px}
 footer .wrap{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
 footer .cols{display:flex;gap:44px;flex-wrap:wrap}
 footer h4{color:var(--lime);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px}
@@ -493,7 +494,8 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
   .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;color:#C9BFA6;text-decoration:none;font-size:11px;font-weight:700;min-width:56px;min-height:44px;justify-content:center}
   .tabbar a.on,.tabbar a:hover{color:var(--lime)}
   .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  body{padding-bottom:64px}
+  footer{padding-bottom:calc(40px + 64px + env(safe-area-inset-bottom,0px))}
+  html{background:#293433}
   .trip{display:none}
 }
 
