@@ -36,7 +36,48 @@ function rp_index_activities( string $where, array $args = [] ): array {
 }
 
 /** The WHERE clause and args that describe a place term. */
-function rp_place_where( WP_Term $t ): array {
+function rp_place_where( WP_Term $t, ?WP_Term $filter = null ): array {
+	[ $w, $a ] = rp_place_where_base( $t );
+	if ( $filter ) {
+		[ $fw, $fa ] = rp_filter_where( $filter );
+		return [ "($w) AND $fw", array_merge( $a, $fa ) ];
+	}
+	return [ $w, $a ];
+}
+
+/** The facility or activity that narrows the current place page, from /{state}/{city}/{slug}. */
+function rp_place_filter(): ?WP_Term {
+	$slug = (string) get_query_var( 'rp_filter' );
+	return '' !== $slug ? RP\Rewrites::filter_term( $slug ) : null;
+}
+
+/** SQL for a filter term against the index: activities are bits, facilities go through term relationships. */
+function rp_filter_where( WP_Term $f ): array {
+	global $wpdb;
+	if ( 'rp_activity' === $f->taxonomy ) {
+		$i = array_search( $f->name, RP\ACTIVITIES, true );
+		return false === $i ? [ '1=0', [] ] : [ '(activity_bits & %d) <> 0', [ 1 << $i ] ];
+	}
+	return [ "post_id IN (SELECT object_id FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d)", [ (int) $f->term_taxonomy_id ] ];
+}
+
+/** /{state}/{city}/, or /{state}/{city}/{facility}/ when narrowed. */
+function rp_place_url( WP_Term $t, ?WP_Term $filter = null ): string {
+	$base = (string) get_term_link( $t );
+	return $filter ? trailingslashit( $base ) . $filter->slug . '/' : $base;
+}
+
+/** "Picnic areas", "Fishing": a filter term for a heading. */
+function rp_filter_label( WP_Term $f ): string {
+	return ucfirst( strtolower( $f->name ) );
+}
+
+/** "places with picnic areas" / "places for fishing". */
+function rp_filter_phrase( WP_Term $f ): string {
+	return ( 'rp_activity' === $f->taxonomy ? 'places for ' : 'places with ' ) . strtolower( $f->name );
+}
+
+function rp_place_where_base( WP_Term $t ): array {
 	$chain = rp_place_chain( $t );
 	$c     = $chain['country'] ?? null;
 	$s     = $chain['state'] ?? null;
@@ -65,7 +106,12 @@ function rp_place_chain( WP_Term $t ): array {
 }
 
 /** Count and acres for a place, from the roll-up table. */
-function rp_place_stats( WP_Term $t ): array {
+function rp_place_stats( WP_Term $t, ?WP_Term $filter = null ): array {
+	// Narrowed to a facility or activity: sum the index rather than read a roll-up.
+	if ( $filter ) {
+		[ $w, $a ] = rp_place_where( $t, $filter );
+		return rp_index_sum( $w, $a );
+	}
 	$chain = rp_place_chain( $t );
 	$level = get_term_meta( $t->term_id, 'rp_level', true );
 	$c     = $chain['country'] ?? '';

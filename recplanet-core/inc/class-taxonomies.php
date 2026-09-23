@@ -71,9 +71,14 @@ class Taxonomies {
 				break;
 			}
 			$slug = ( 'country' === $level ) ? $code : ( 'state' === $level ? strtolower( $code ) : legacy_slug( $name ) );
-			$term = get_terms( [ 'taxonomy' => TAX_PLACE, 'slug' => $slug, 'parent' => $parent, 'hide_empty' => false, 'number' => 1 ] );
+			// Looked up by name under the parent: WordPress keeps term slugs unique across the whole taxonomy, so the
+			// second Springfield gets a slug like springfield-union-county and a slug lookup would miss it.
+			$term = get_terms( [ 'taxonomy' => TAX_PLACE, 'name' => $name, 'parent' => $parent, 'hide_empty' => false, 'number' => 1 ] );
 			if ( $term && ! is_wp_error( $term ) ) {
 				$parent = $term[0]->term_id;
+				if ( '' === (string) get_term_meta( $parent, 'rp_slug', true ) ) {
+					update_term_meta( $parent, 'rp_slug', $slug );
+				}
 				continue;
 			}
 			$r = wp_insert_term( $name, TAX_PLACE, [ 'slug' => $slug, 'parent' => $parent ] );
@@ -83,6 +88,7 @@ class Taxonomies {
 			$parent = $r['term_id'];
 			update_term_meta( $parent, 'rp_level', $level );
 			update_term_meta( $parent, 'rp_code', $code );
+			update_term_meta( $parent, 'rp_slug', $slug );     // the URL segment, which may differ from the term's own slug
 		}
 		return $parent;
 	}

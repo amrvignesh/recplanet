@@ -7,6 +7,7 @@ defined( 'ABSPATH' ) || exit;
  * URLs.
  *   /{state}/{city}/{slug}     a US park, unchanged from the old site
  *   /{state}/{city}            city page (place term)
+ *   /{state}/{city}/{facility} city page narrowed to a facility or activity (picnic-areas, fishing); also /{state}/{facility}
  *   /{state}/county/{county}   county page
  *   /{state}                   state page
  *   /world/{country}           country page
@@ -17,7 +18,7 @@ class Rewrites {
 
 	public static function init(): void {
 		add_action( 'init', [ __CLASS__, 'rules' ] );
-		add_filter( 'query_vars', fn( $v ) => array_merge( $v, [ 'rp_state', 'rp_city', 'rp_county', 'rp_country', 'rp_place_level' ] ) );
+		add_filter( 'query_vars', fn( $v ) => array_merge( $v, [ 'rp_state', 'rp_city', 'rp_county', 'rp_country', 'rp_place_level', 'rp_filter' ] ) );
 		add_filter( 'post_type_link', [ __CLASS__, 'park_link' ], 10, 2 );
 		add_filter( 'term_link', [ __CLASS__, 'place_link' ], 10, 3 );
 		add_action( 'pre_get_posts', [ __CLASS__, 'resolve' ] );
@@ -29,6 +30,7 @@ class Rewrites {
 		$st = '([a-z]{2})';
 		// Pagination first, so "page" is never read as a city.
 		add_rewrite_rule( "^world/([a-z]{2})/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country&paged=$matches[2]', 'top' );
+		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_filter=$matches[3]&rp_place_level=city&paged=$matches[4]', 'top' );
 		add_rewrite_rule( "^$st/county/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county&paged=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city&paged=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_place_level=state&paged=$matches[2]', 'top' );
@@ -77,8 +79,8 @@ class Rewrites {
 		switch ( $level ) {
 			case 'country': return home_url( '/' );
 			case 'state':   return user_trailingslashit( home_url( '/' . $chain[1]->slug ) );
-			case 'county':  return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/county/' . $term->slug ) );
-			case 'city':    return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/' . $term->slug ) );
+			case 'county':  return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/county/' . self::url_slug( $term ) ) );
+			case 'city':    return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/' . self::url_slug( $term ) ) );
 		}
 		return $link;
 	}
@@ -90,23 +92,27 @@ class Rewrites {
 		}
 		$level = $q->get( 'rp_place_level' );
 		if ( $level ) {
-			$term = self::find_place( $level, strtolower( (string) $q->get( 'rp_country' ) ) ?: 'us', (string) $q->get( 'rp_state' ), (string) $q->get( 'rp_county' ), (string) $q->get( 'rp_city' ) );
+			$country = strtolower( (string) $q->get( 'rp_country' ) ) ?: 'us';
+			$filter  = self::filter_term( (string) $q->get( 'rp_filter' ) );
+			if ( $q->get( 'rp_filter' ) && ! $filter ) {
+				self::not_found( $q );
+				return;
+			}
+			$term = self::find_place( $level, $country, (string) $q->get( 'rp_state' ), (string) $q->get( 'rp_county' ), (string) $q->get( 'rp_city' ) );
+			// /{state}/{facility-or-activity}: the state page, narrowed.
+			if ( ! $term && 'city' === $level && ! $filter ) {
+				$f = self::filter_term( (string) $q->get( 'rp_city' ) );
+				if ( $f ) {
+					$term   = self::find_place( 'state', $country, (string) $q->get( 'rp_state' ), '', '' );
+					$filter = $f;
+				}
+			}
 			if ( $term ) {
-				$q->set( 'rp_place_level', '' );
-				$q->set( 'taxonomy', TAX_PLACE );
-				$q->set( 'term', $term->slug );
-				$q->set( 'rp_place', $term->slug );
-				$q->set( 'post_type', POST_PARK );
-				$q->set( 'posts_per_page', 50 );
-				$q->set( 'orderby', 'meta_value_num' );
-				$q->set( 'meta_key', 'rp_acreage' );
-				$q->set( 'order', 'DESC' );
-				$q->set( 'tax_query', [ [ 'taxonomy' => TAX_PLACE, 'field' => 'term_id', 'terms' => $term->term_id, 'include_children' => true ] ] );
-				self::flags( $q, 'tax', $term );
+				self::place_archive( $q, $term, $filter );
 				return;
 			}
 			// /{state}/{slug}: a park that has no city on record (national forests, wildlife areas).
-			if ( 'city' === $level ) {
+			if ( 'city' === $level && ! $filter ) {
 				$park = get_posts( [ 'post_type' => POST_PARK, 'name' => (string) $q->get( 'rp_city' ), 'post_status' => 'publish', 'posts_per_page' => 1,
 					'meta_query' => [ [ 'key' => 'rp_state', 'value' => strtoupper( (string) $q->get( 'rp_state' ) ) ] ] ] );
 				if ( $park ) {
@@ -119,11 +125,23 @@ class Rewrites {
 					return;
 				}
 			}
-			$q->set_404();
+			self::not_found( $q );
 			return;
 		}
-		// Park with the same slug in two cities: pin it to the place in the URL.
+		// /{state}/{city}/{slug}: a park; or, when no park has that slug, the city narrowed to a facility or activity.
 		if ( POST_PARK === $q->get( 'post_type' ) && $q->get( 'name' ) && ( $q->get( 'rp_state' ) || $q->get( 'rp_country' ) ) ) {
+			if ( $q->get( 'rp_state' ) && $q->get( 'rp_city' ) ) {
+				$f = self::filter_term( (string) $q->get( 'name' ) );
+				if ( $f && ! self::park_exists( (string) $q->get( 'name' ), (string) $q->get( 'rp_state' ) ) ) {
+					$term = self::find_place( 'city', 'us', (string) $q->get( 'rp_state' ), '', (string) $q->get( 'rp_city' ) );
+					if ( $term ) {
+						$q->set( 'name', '' );
+						self::place_archive( $q, $term, $f );
+						return;
+					}
+				}
+			}
+			// Park with the same slug in two cities: pin it to the place in the URL.
 			$meta = [ 'relation' => 'AND' ];
 			if ( $q->get( 'rp_state' ) ) {
 				$meta[] = [ 'key' => 'rp_state', 'value' => strtoupper( $q->get( 'rp_state' ) ) ];
@@ -133,6 +151,54 @@ class Rewrites {
 			}
 			$q->set( 'meta_query', $meta );
 		}
+	}
+
+	/** Turn the main query into a place listing, optionally narrowed to one facility or activity term. */
+	private static function place_archive( \WP_Query $q, \WP_Term $term, ?\WP_Term $filter ): void {
+		$q->set( 'rp_place_level', '' );
+		$q->set( 'taxonomy', TAX_PLACE );
+		$q->set( 'term', $term->slug );
+		$q->set( 'rp_place', $term->slug );
+		$q->set( 'post_type', POST_PARK );
+		$q->set( 'posts_per_page', 50 );
+		$q->set( 'orderby', 'meta_value_num' );
+		$q->set( 'meta_key', 'rp_acreage' );
+		$q->set( 'order', 'DESC' );
+		$tax = [ [ 'taxonomy' => TAX_PLACE, 'field' => 'term_id', 'terms' => $term->term_id, 'include_children' => true ] ];
+		if ( $filter ) {
+			$tax['relation'] = 'AND';
+			$tax[]           = [ 'taxonomy' => $filter->taxonomy, 'field' => 'term_id', 'terms' => $filter->term_id ];
+		}
+		$q->set( 'rp_filter', $filter ? $filter->slug : '' );
+		$q->set( 'tax_query', $tax );
+		self::flags( $q, 'tax', $term );
+	}
+
+	/** A facility or activity term by slug. The two words URLs reserve are never terms. */
+	public static function filter_term( string $slug ): ?\WP_Term {
+		if ( '' === $slug || in_array( $slug, [ 'page', 'county' ], true ) ) {
+			return null;
+		}
+		foreach ( [ TAX_FACILITY, TAX_ACTIVITY ] as $tax ) {
+			$t = get_term_by( 'slug', $slug, $tax );
+			if ( $t instanceof \WP_Term ) {
+				return $t;
+			}
+		}
+		return null;
+	}
+
+	private static function park_exists( string $slug, string $state ): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'rp_state' WHERE p.post_name = %s AND p.post_type = %s AND p.post_status = 'publish' AND m.meta_value = %s LIMIT 1", $slug, POST_PARK, strtoupper( $state ) ) );
+	}
+
+	/** A real 404: no posts at all, so WordPress sends a 404 status rather than a 200 with the 404 template. */
+	private static function not_found( \WP_Query $q ): void {
+		$q->set_404();
+		$q->set( 'rp_place_level', '' );
+		$q->set( 'post_type', POST_PARK );
+		$q->set( 'post__in', [ 0 ] );
 	}
 
 	/** WordPress decided is_home before we changed the query; set the flags it will read for the template. */
@@ -146,7 +212,7 @@ class Rewrites {
 		$q->queried_object = $obj; $q->queried_object_id = 'tax' === $kind ? $obj->term_id : $obj->ID;
 	}
 
-	private static function find_place( string $level, string $country, string $state, string $county, string $city ): ?\WP_Term {
+	public static function find_place( string $level, string $country, string $state, string $county, string $city ): ?\WP_Term {
 		$parent = self::term_by_slug( $country, 0 );
 		if ( ! $parent ) {
 			return null;
@@ -162,21 +228,42 @@ class Rewrites {
 			return $st;
 		}
 		if ( 'county' === $level ) {
-			return self::term_by_slug( $county, $st->term_id );
+			foreach ( self::terms_by_url_slug( $county ) as $t ) {
+				if ( $t->parent === $st->term_id ) {
+					return $t;
+				}
+			}
+			return null;
 		}
 		// city: may sit under the state or under a county
-		$c = self::term_by_slug( $city, $st->term_id );
-		if ( $c ) {
-			return $c;
-		}
-		$all = get_terms( [ 'taxonomy' => TAX_PLACE, 'slug' => $city, 'hide_empty' => false ] );
-		foreach ( $all as $t ) {
-			$p = get_term( $t->parent, TAX_PLACE );
-			if ( $p && $p->parent === $st->term_id ) {
+		foreach ( self::terms_by_url_slug( $city ) as $t ) {
+			if ( $t->parent === $st->term_id ) {
+				return $t;
+			}
+			$p = $t->parent ? get_term( $t->parent, TAX_PLACE ) : null;
+			if ( $p instanceof \WP_Term && $p->parent === $st->term_id ) {
 				return $t;
 			}
 		}
 		return null;
+	}
+
+	/** The segment a place uses in URLs: the slug of its name, kept in meta because term slugs are unique site-wide. */
+	public static function url_slug( \WP_Term $term ): string {
+		$s = (string) get_term_meta( $term->term_id, 'rp_slug', true );
+		return '' !== $s ? $s : legacy_slug( $term->name );
+	}
+
+	/** Every place term whose URL segment is this (Springfield exists in many states). */
+	private static function terms_by_url_slug( string $slug ): array {
+		if ( '' === $slug ) {
+			return [];
+		}
+		$t = get_terms( [ 'taxonomy' => TAX_PLACE, 'hide_empty' => false, 'meta_key' => 'rp_slug', 'meta_value' => $slug ] );
+		if ( ! is_array( $t ) || ! $t ) {
+			$t = get_terms( [ 'taxonomy' => TAX_PLACE, 'slug' => $slug, 'hide_empty' => false ] );
+		}
+		return is_array( $t ) ? $t : [];
 	}
 
 	private static function term_by_slug( string $slug, int $parent ): ?\WP_Term {
@@ -201,36 +288,79 @@ class Rewrites {
 		exit;
 	}
 
-	/** 404 → look the old path up → 301. One indexed query, only on misses. */
+	/** 404 → the old top-level pages, then /node/N, then the redirect table, then the shapes that never had aliases → 301. */
 	public static function legacy_redirect(): void {
 		if ( ! is_404() ) {
 			return;
 		}
+		// Core's handle_404() bails when the query was already flagged 404 (as resolve() does), so the status header
+		// would stay 200. Send it here; a redirect below replaces it with a 301.
+		status_header( 404 );
+		nocache_headers();
 		global $wpdb;
 		$path = trim( (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
 		if ( '' === $path ) {
 			return;
 		}
 		$path = rawurldecode( $path );
+		$path = (string) preg_replace( '#/(feed|track|rss\.xml)$#', '', $path );     // the old site's per-page feeds and "track" tabs
 		$to   = self::old_site_url( $path, $_GET );
-		if ( $to ) {
-			wp_redirect( home_url( $to ), 301 );
-			exit;
+		if ( '' === $to ) {
+			$to = self::old_node_url( $path );
 		}
-		$row  = $wpdb->get_row( $wpdb->prepare( "SELECT new_path FROM " . table( 'redirects' ) . " WHERE old_path = %s", $path ) );
-		if ( ! $row ) {
-			// The old site served park aliases with and without the state segment; try the last segment as a park slug.
-			$slug = basename( $path );
-			$p    = get_posts( [ 'post_type' => POST_PARK, 'name' => $slug, 'posts_per_page' => 1, 'post_status' => 'publish' ] );
-			if ( $p ) {
-				wp_redirect( get_permalink( $p[0] ), 301 );
-				exit;
+		if ( '' === $to ) {
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT new_path FROM " . table( 'redirects' ) . " WHERE old_path = %s", $path ) );
+			if ( $row ) {
+				$wpdb->query( $wpdb->prepare( "UPDATE " . table( 'redirects' ) . " SET hits = hits + 1 WHERE old_path = %s", $path ) );
+				$to = '/' . ltrim( $row->new_path, '/' );
 			}
+		}
+		if ( '' === $to ) {
+			$to = self::old_path_guess( $path );
+		}
+		if ( '' === $to ) {
 			return;
 		}
-		$wpdb->query( $wpdb->prepare( "UPDATE " . table( 'redirects' ) . " SET hits = hits + 1 WHERE old_path = %s", $path ) );
-		wp_redirect( home_url( '/' . ltrim( $row->new_path, '/' ) ), 301 );
+		wp_redirect( home_url( $to ), 301 );
 		exit;
+	}
+
+	/** /node/N by the Drupal node id kept on every imported park, photo and post. */
+	private static function old_node_url( string $path ): string {
+		global $wpdb;
+		if ( ! preg_match( '#^node/(\d+)#', $path, $m ) ) {
+			return '';
+		}
+		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'rp_legacy_nid' AND meta_value = %s LIMIT 1", $m[1] ) );
+		if ( $id && 'publish' === get_post_status( $id ) ) {
+			return (string) wp_parse_url( get_permalink( $id ), PHP_URL_PATH );
+		}
+		return '/';
+	}
+
+	/** Old paths that never had aliases: member pages, member blogs, uploaded files, stray tag pages, bare park slugs. */
+	private static function old_path_guess( string $path ): string {
+		global $wpdb;
+		if ( preg_match( '#^users?(/|$)#', $path ) ) {
+			return '/contest/';
+		}
+		if ( preg_match( '#^blogs?(/|$)#', $path ) ) {
+			return '/blog/';
+		}
+		if ( preg_match( '#^sites/default/files/(?:imagecache/[^/]+/)?(.+)$#', $path, $m ) ) {
+			$id  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = 'attachment' AND guid LIKE %s ORDER BY ID LIMIT 1", '%/' . $wpdb->esc_like( basename( $m[1] ) ) ) );
+			$url = $id ? wp_get_attachment_url( $id ) : '';
+			return $url ? (string) wp_parse_url( $url, PHP_URL_PATH ) : '/';
+		}
+		if ( preg_match( '#^category/[^/]+/(.+)$#', $path, $m ) ) {
+			return '/?s=' . rawurlencode( str_replace( '-', ' ', basename( $m[1] ) ) );
+		}
+		if ( str_starts_with( $path, 'taxonomy/term/' ) ) {
+			return '/states/';
+		}
+		// The old site served park aliases with and without the state segment; try the last segment as a park slug.
+		$p = get_posts( [ 'post_type' => POST_PARK, 'name' => basename( $path ), 'posts_per_page' => 1, 'post_status' => 'publish' ] );
+		return $p ? (string) wp_parse_url( get_permalink( $p[0] ), PHP_URL_PATH ) : '';
 	}
 
 	/** The old finder and the old top-level pages: /park?province=GA&city=Decatur, /city?province=TX, /world-parks ... */
@@ -258,7 +388,19 @@ class Rewrites {
 			case 'contact':       return '/contact/';
 			case 'blogtags':      return '/blog-tags/';
 			case 'blog':          return '/blog/';
-			case 'forum':         return '/';
+			case 'forum':
+			case 'welcome':
+			case 'try-again':
+			case 'sorry':
+			case 'node':          return '/';
+			case 'photo-rules':   return '/rules/';
+			case 'park-creation-contest':
+			case 'park-adding-contest':
+			case 'congrats':      return '/contest/';
+			case 'acreage-message': return '/acre-counter/';
+			case 'my-blog':       return '/blog/';
+			case 'rss.xml':       return '/feed/';
+			case 'sitemap.xml':   return '/wp-sitemap.xml';
 			case 'about-us':      return '/about-us/';
 			case 'new-user-register':
 			case 'user/register': return wp_parse_url( wp_registration_url(), PHP_URL_PATH ) . '?' . wp_parse_url( wp_registration_url(), PHP_URL_QUERY );

@@ -417,35 +417,171 @@ class Import_Command {
 
 	private function redirects( array $a ): void {
 		global $wpdb;
-		$rows = $wpdb->get_results( "SELECT a.dst, t.name FROM {$this->t('url_alias')} a JOIN {$this->t('term_data')} t ON CONCAT('taxonomy/term/', t.tid) = a.src WHERE a.dst LIKE 'category/%' AND t.vid = 5" );
-		$states = array_flip( array_map( 'strtolower', us_states() ) );   // name -> code
+		$states = [];
+		foreach ( us_states() as $code => $name ) {
+			$states[ strtolower( $name ) ] = strtolower( $code );
+		}
+		// Park Tags (vid 5), Contest Tags (6) and blog tags (9): the alias and the raw taxonomy/term/N path both go to one page.
+		$rows = $wpdb->get_results( "SELECT a.src, a.dst, t.name, t.vid FROM {$this->t('url_alias')} a JOIN {$this->t('term_data')} t ON CONCAT('taxonomy/term/', t.tid) = a.src WHERE t.vid IN (5, 6, 9)" );
+		$n    = 0;
 		foreach ( $rows as $r ) {
-			$target = $this->target_for_tag( $r->name, $states );
-			if ( $target ) {
-				Rewrites::add_redirect( $r->dst, $target, 'tag' );
-				$this->stats['tag_redirects'] = ( $this->stats['tag_redirects'] ?? 0 ) + 1;
+			if ( 5 === (int) $r->vid ) {
+				$target = $this->target_for_tag( $r->name, $states );
+				$kind   = 'tag';
 			} else {
-				$this->stats['tag_unparsed'] = ( $this->stats['tag_unparsed'] ?? 0 ) + 1;
+				$t      = get_term_by( 'name', $r->name, 'post_tag' );
+				$target = $t instanceof \WP_Term ? $this->path( get_term_link( $t ) ) : '/blog/';
+				$kind   = 'blogtag';
+				$this->tag_kind = $t instanceof \WP_Term ? 'blogtag' : 'blog';
 			}
+			Rewrites::add_redirect( $r->dst, $target, $kind );
+			Rewrites::add_redirect( $r->src, $target, $kind );
+			$this->stats[ 'tags_to_' . $this->tag_kind ] = ( $this->stats[ 'tags_to_' . $this->tag_kind ] ?? 0 ) + 1;
+			if ( 0 === ++$n % 500 ) {
+				Index::free_memory();
+			}
+		}
+		// Every other node alias (photos, pages, forum posts): parks and blog posts got theirs on import.
+		$rows = $wpdb->get_results( "SELECT a.src, a.dst, n.type, n.nid FROM {$this->t('url_alias')} a JOIN {$this->t('node')} n ON CONCAT('node/', n.nid) = a.src WHERE n.type NOT IN ('world_parks', 'blogs')" );
+		foreach ( $rows as $r ) {
+			$target = Rewrites::old_site_url( $r->dst, [] );
+			if ( '' === $target ) {
+				$id     = (int) $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = 'rp_legacy_nid' AND meta_value = %s LIMIT 1", $r->nid ) );
+				$target = $id && 'publish' === get_post_status( $id ) ? $this->path( get_permalink( $id ) ) : '/';
+			}
+			Rewrites::add_redirect( $r->dst, $target, 'node' );
+			$this->stats['node_redirects'] = ( $this->stats['node_redirects'] ?? 0 ) + 1;
 		}
 	}
 
-	/** "Irving Texas Playgrounds" -> /tx/irving/playgrounds ; "Texas State Parks" -> /tx/state-parks ; else state page. */
-	private function target_for_tag( string $tag, array $states ): ?string {
-		$tl = strtolower( trim( $tag ) );
+	private string $tag_kind = '';
+
+	/**
+	 * Where an old Park Tag page goes. Tags were mostly "City State Facility", but also "Facility City State",
+	 * a state or county alone, a park's own name, or a stray word. Every answer is a page that exists:
+	 * a park, a city or state page (narrowed to the facility when the site knows it), or a search.
+	 */
+	private function target_for_tag( string $tag, array $states ): string {
+		$tl = strtolower( trim( (string) preg_replace( '/\s+/', ' ', $tag ) ) );
+		$tl = (string) preg_replace( '/\s+in\s+/', ' ', $tl );
+		if ( isset( $states[ $tl ] ) ) {
+			$this->tag_kind = 'state';
+			return '/' . $states[ $tl ] . '/';
+		}
 		foreach ( $states as $name => $code ) {
+			if ( str_starts_with( $tl, $name . ' ' ) ) {
+				return $this->state_target( $code, substr( $tl, strlen( $name ) + 1 ) );
+			}
 			$pos = strpos( $tl, ' ' . $name . ' ' );
 			if ( false !== $pos ) {
-				$city = trim( substr( $tag, 0, $pos ) );
-				$fac  = trim( substr( $tl, $pos + strlen( $name ) + 2 ) );
-				$fac  = str_replace( [ 'disc-golf', 'roller-hockey' ], [ 'disc golf', 'roller hockey' ], $fac );
-				return '/' . strtolower( $code ) . '/' . legacy_slug( $city ) . '/' . legacy_slug( $fac );
+				return $this->city_target( $code, substr( $tl, 0, $pos ), substr( $tl, $pos + strlen( $name ) + 2 ) );
 			}
-			if ( str_starts_with( $tl, $name . ' ' ) ) {
-				return '/' . strtolower( $code ) . '/' . legacy_slug( substr( $tl, strlen( $name ) + 1 ) );
+			if ( str_ends_with( $tl, ' ' . $name ) ) {
+				$words = explode( ' ', trim( substr( $tl, 0, -strlen( $name ) - 1 ) ) );
+				for ( $i = min( 4, count( $words ) ); $i >= 1; $i-- ) {          // the longest tail that is a city in that state
+					$city = implode( ' ', array_slice( $words, -$i ) );
+					if ( '' !== $this->city_slug( $code, $city ) ) {
+						return $this->city_target( $code, $city, implode( ' ', array_slice( $words, 0, count( $words ) - $i ) ) );
+					}
+				}
+				return $this->state_target( $code, implode( ' ', $words ) );
 			}
 		}
-		return null;
+		if ( preg_match( '/^(.+) (county|parish)$/', $tl ) ) {
+			$t = get_terms( [ 'taxonomy' => TAX_PLACE, 'slug' => legacy_slug( $tl ), 'hide_empty' => false, 'meta_key' => 'rp_level', 'meta_value' => 'county' ] );
+			if ( is_array( $t ) && 1 === count( $t ) ) {
+				$this->tag_kind = 'county';
+				return $this->path( get_term_link( $t[0] ) );
+			}
+		}
+		$park = $this->unique_park( $tag );
+		if ( '' !== $park ) {
+			$this->tag_kind = 'park';
+			return $park;
+		}
+		$t = get_terms( [ 'taxonomy' => TAX_PLACE, 'name' => trim( $tag ), 'hide_empty' => true, 'meta_key' => 'rp_level', 'meta_value' => 'city' ] );
+		if ( is_array( $t ) && 1 === count( $t ) ) {
+			$this->tag_kind = 'city';
+			return $this->path( get_term_link( $t[0] ) );
+		}
+		$f = $this->facility_slug( $tl );
+		if ( '' !== $f && $f === legacy_slug( $tl ) ) {
+			$this->tag_kind = 'filter';
+			return $this->path( get_term_link( Rewrites::filter_term( $f ) ) );
+		}
+		$this->tag_kind = 'search';
+		return '/?s=' . rawurlencode( trim( $tag ) );
+	}
+
+	private function city_target( string $code, string $city, string $fac ): string {
+		$cs = $this->city_slug( $code, $city );
+		if ( '' === $cs ) {
+			return $this->state_target( $code, $fac );
+		}
+		$fac = trim( $fac );
+		if ( '' === $fac ) {
+			$this->tag_kind = 'city';
+			return "/$code/$cs/";
+		}
+		$park = $this->unique_park( $fac, $code );
+		if ( '' !== $park ) {
+			$this->tag_kind = 'park';
+			return $park;
+		}
+		$fs = $this->facility_slug( $fac );
+		$this->tag_kind = '' !== $fs ? 'city_filter' : 'city';
+		return "/$code/$cs/" . ( '' !== $fs ? "$fs/" : '' );
+	}
+
+	private function state_target( string $code, string $fac ): string {
+		$fac  = trim( $fac );
+		$park = '' !== $fac ? $this->unique_park( $fac, $code ) : '';
+		if ( '' !== $park ) {
+			$this->tag_kind = 'park';
+			return $park;
+		}
+		$fs = $this->facility_slug( $fac );
+		$this->tag_kind = '' !== $fs ? 'state_filter' : 'state';
+		return "/$code/" . ( '' !== $fs ? "$fs/" : '' );
+	}
+
+	private function city_slug( string $code, string $city ): string {
+		$slug = legacy_slug( $city );
+		if ( '' === $slug ) {
+			return '';
+		}
+		$t = Rewrites::find_place( 'city', 'us', $code, '', $slug );
+		return $t ? $t->slug : '';
+	}
+
+	/** "alafia river boat ramps" -> boat-ramps: the longest tail that is a facility or activity the site knows. */
+	private function facility_slug( string $fac ): string {
+		$fac   = str_replace( [ 'disc-golf', 'roller-hockey', 'splash pads' ], [ 'disc golf', 'roller hockey', 'spraygrounds' ], strtolower( trim( $fac ) ) );
+		$words = array_values( array_filter( explode( ' ', $fac ) ) );
+		for ( $i = min( 4, count( $words ) ); $i >= 1; $i-- ) {
+			$slug = legacy_slug( implode( ' ', array_slice( $words, -$i ) ) );
+			if ( '' !== $slug && Rewrites::filter_term( $slug ) ) {
+				return $slug;
+			}
+		}
+		return '';
+	}
+
+	/** The one published park with exactly this title (in this state, when given); '' when none or several. */
+	private function unique_park( string $title, string $state = '' ): string {
+		global $wpdb;
+		$title = trim( $title );
+		if ( '' === $title ) {
+			return '';
+		}
+		$sql  = "SELECT p.ID FROM {$wpdb->posts} p" . ( '' !== $state ? " JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'rp_state' AND m.meta_value = %s" : '' ) . " WHERE p.post_type = %s AND p.post_status = 'publish' AND p.post_title = %s LIMIT 2";
+		$args = '' !== $state ? [ strtoupper( $state ), POST_PARK, $title ] : [ POST_PARK, $title ];
+		$ids  = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
+		return 1 === count( $ids ) ? $this->path( get_permalink( (int) $ids[0] ) ) : '';
+	}
+
+	private function path( $url ): string {
+		return is_string( $url ) ? (string) wp_parse_url( $url, PHP_URL_PATH ) : '/';
 	}
 
 	// ------------------------------------------------------------------ backfill
@@ -506,6 +642,60 @@ class Import_Command {
 	}
 
 	/** Rebuild the index and every roll-up from scratch. */
+	/**
+	 * Put every park on its city (or county, or state) term and give every place its URL segment.
+	 * Repairs imports made while duplicate city names stopped term creation.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--limit=<n>]
+	 * : Stop after this many parks.
+	 */
+	public function places( array $args, array $assoc ): void {
+		global $wpdb;
+		wp_suspend_cache_addition( true );
+		wp_defer_term_counting( true );
+		// 1. URL segments for existing place terms.
+		$terms = get_terms( [ 'taxonomy' => TAX_PLACE, 'hide_empty' => false, 'fields' => 'all' ] );
+		$slugged = 0;
+		foreach ( $terms as $t ) {
+			$level = get_term_meta( $t->term_id, 'rp_level', true );
+			$slug  = 'country' === $level ? $t->slug : ( 'state' === $level ? $t->slug : legacy_slug( $t->name ) );
+			if ( (string) get_term_meta( $t->term_id, 'rp_slug', true ) !== $slug ) {
+				update_term_meta( $t->term_id, 'rp_slug', $slug );
+				$slugged++;
+			}
+		}
+		WP_CLI::log( count( $terms ) . " place terms, $slugged given a URL segment." );
+		// 2. Every park on its leaf place.
+		$ids   = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish' ORDER BY ID", POST_PARK ) );
+		$limit = (int) ( $assoc['limit'] ?? 0 );
+		$moved = 0;
+		$n     = 0;
+		$bar   = \WP_CLI\Utils\make_progress_bar( 'Places', $limit ?: count( $ids ) );
+		foreach ( $ids as $id ) {
+			$id    = (int) $id;
+			$place = Taxonomies::place_term( (string) get_post_meta( $id, 'rp_country', true ) ?: 'us', (string) get_post_meta( $id, 'rp_state', true ), (string) get_post_meta( $id, 'rp_county', true ), (string) get_post_meta( $id, 'rp_city', true ) );
+			$cur   = wp_get_object_terms( $id, TAX_PLACE, [ 'fields' => 'ids' ] );
+			if ( $place && ( ! is_array( $cur ) || [ $place ] !== array_map( 'intval', $cur ) ) ) {
+				wp_set_object_terms( $id, [ $place ], TAX_PLACE );
+				$moved++;
+			}
+			$bar->tick();
+			if ( 0 === ++$n % 250 ) {
+				Index::free_memory();
+			}
+			if ( $limit && $n >= $limit ) {
+				break;
+			}
+		}
+		$bar->finish();
+		wp_defer_term_counting( false );
+		wp_suspend_cache_addition( false );
+		$counts = $wpdb->get_results( "SELECT tm.meta_value AS level, COUNT(*) AS n FROM {$wpdb->term_taxonomy} tt JOIN {$wpdb->termmeta} tm ON tm.term_id = tt.term_id AND tm.meta_key = 'rp_level' WHERE tt.taxonomy = '" . TAX_PLACE . "' GROUP BY tm.meta_value" );
+		WP_CLI::success( "$n parks checked, $moved moved to their place. Terms now: " . implode( ', ', array_map( fn( $r ) => "$r->n $r->level", $counts ) ) . '.' );
+	}
+
 	public function rebuild( array $args, array $assoc ): void {
 		$n = Index::rebuild_all( fn( $done, $total ) => WP_CLI::log( "$done / $total" ) );
 		$w = Counter::get( 'world', 'world' );

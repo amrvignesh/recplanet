@@ -26,13 +26,20 @@ function rp_seo_context(): array {
 		}
 	} elseif ( is_tax( 'rp_place' ) ) {
 		$t = get_queried_object();
-		$s = rp_place_stats( $t );
+		$f = rp_place_filter();
+		$s = rp_place_stats( $t, $f );
 		$chain = rp_place_chain( $t );
 		$level = get_term_meta( $t->term_id, 'rp_level', true );
 		$where = 'city' === $level || 'county' === $level ? $t->name . ', ' . ( $chain['terms']['state']->name ?? '' ) : $t->name;
-		$c['title']     = $where . ': ' . number_format( $s['count'] ) . ' parks and public lands';
-		$c['desc']      = number_format( $s['count'] ) . ' parks, trails and public places in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, with what you can do at each one. Checked by a person, not scraped.';
-		$c['canonical'] = get_term_link( $t );
+		if ( $f ) {
+			$c['title']     = rp_filter_label( $f ) . ' in ' . $where . ': ' . number_format( $s['count'] ) . ' places';
+			$c['desc']      = number_format( $s['count'] ) . ' ' . rp_filter_phrase( $f ) . ' in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, each one checked by a person.';
+			$c['canonical'] = rp_place_url( $t, $f );
+		} else {
+			$c['title']     = $where . ': ' . number_format( $s['count'] ) . ' parks and public lands';
+			$c['desc']      = number_format( $s['count'] ) . ' parks, trails and public places in ' . $where . ' across ' . RP\format_acres( $s['acres'], 0 ) . ' acres, with what you can do at each one. Checked by a person, not scraped.';
+			$c['canonical'] = get_term_link( $t );
+		}
 		$c['noindex']   = $s['count'] < 3;
 	} elseif ( is_tax( [ 'rp_activity', 'rp_facility', 'rp_steward' ] ) ) {
 		$t = get_queried_object();
@@ -129,7 +136,7 @@ add_action( 'wp_head', function () {
 		global $wp_query;
 		$max = (int) $wp_query->max_num_pages;
 		if ( is_tax( 'rp_place' ) ) {
-			$max = (int) ceil( rp_place_stats( get_queried_object() )['count'] / 50 );
+			$max = (int) ceil( rp_place_stats( get_queried_object(), rp_place_filter() )['count'] / 50 );
 		}
 		if ( $paged > 1 ) {
 			echo '<link rel="prev" href="' . esc_url( $paged > 2 ? $base . 'page/' . ( $paged - 1 ) . '/' : $base ) . '">' . "\n";
@@ -180,6 +187,9 @@ add_action( 'wp_head', function () {
 		$crumbs[] = [ get_the_title(), get_permalink() ];
 	} elseif ( is_tax( 'rp_place' ) ) {
 		$crumbs = rp_place_crumbs( get_queried_object() );
+		if ( $f = rp_place_filter() ) {
+			$crumbs[] = [ rp_filter_label( $f ), rp_place_url( get_queried_object(), $f ) ];
+		}
 	} elseif ( is_tax() ) {
 		$t = get_queried_object();
 		$crumbs = [ [ 'World', home_url( '/' ) ], [ ucfirst( str_replace( 'rp_', '', $t->taxonomy ) ), home_url( '/activities/' ) ], [ $t->name, get_term_link( $t ) ] ];
@@ -194,7 +204,7 @@ add_action( 'wp_head', function () {
 	if ( is_tax() ) {
 		$t = get_queried_object();
 		if ( 'rp_place' === $t->taxonomy ) {
-			[ $w, $a ] = rp_place_where( $t );
+			[ $w, $a ] = rp_place_where( $t, rp_place_filter() );
 			$rows = rp_index_rows( $w, $a, 'acres DESC', 50 );
 		} elseif ( 'rp_activity' === $t->taxonomy ) {
 			$i    = array_search( $t->name, RP\ACTIVITIES, true );

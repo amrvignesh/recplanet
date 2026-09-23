@@ -3,8 +3,10 @@
 get_header();
 $t     = get_queried_object();
 $level = get_term_meta( $t->term_id, 'rp_level', true );
-$stats = rp_place_stats( $t );
-[ $where, $args ] = rp_place_where( $t );
+$filter = rp_place_filter();
+$base   = rp_place_url( $t, $filter );
+$stats  = rp_place_stats( $t, $filter );
+[ $where, $args ] = rp_place_where( $t, $filter );
 $acts    = rp_index_activities( $where, $args );
 $largest = rp_index_rows( $where, $args, 'acres DESC', 1 );
 $sort    = sanitize_key( $_GET['sort'] ?? 'acres' );
@@ -17,22 +19,23 @@ $bbox    = $GLOBALS['wpdb']->get_row( $GLOBALS['wpdb']->prepare( "SELECT MIN(lat
 $chain   = rp_place_chain( $t );
 $labels  = [ 'country' => 'Country', 'state' => 'State', 'county' => 'County', 'city' => 'City' ];
 $parent  = $t->parent ? get_term( $t->parent, 'rp_place' ) : null;
-$lead    = sprintf( '%s public places on file across %s acres%s. %s',
-	number_format( $stats['count'] ), RP\format_acres( $stats['acres'], 0 ),
+$lead    = sprintf( '%s %s across %s acres%s. %s',
+	number_format( $stats['count'] ), $filter ? rp_filter_phrase( $filter ) . ' in ' . $t->name . ( $parent ? ', ' . $parent->name : '' ) : 'public places on file', RP\format_acres( $stats['acres'], 0 ),
 	$largest ? ', from ' . $largest[0]->title . ' at ' . RP\format_acres( (float) $largest[0]->acres, 0 ) . ' acres down' : '',
 	$acts ? ucfirst( strtolower( array_key_first( $acts ) ) ) . ' is the most common activity, at ' . number_format( reset( $acts ) ) . ' places. ' : '' ) . 'Every one was checked by a person.';
 ?>
-<?php echo rp_crumbs( rp_place_crumbs( $t ), $parent ? RP\format_acres( $stats['acres'] ) . ' of ' . RP\format_acres( rp_place_stats( $parent )['acres'] ) . ' ' . $parent->name . ' acres' : '' ); ?>
+<?php echo rp_crumbs( array_merge( rp_place_crumbs( $t ), $filter ? [ [ rp_filter_label( $filter ), $base ] ] : [] ), $parent ? RP\format_acres( $stats['acres'] ) . ' of ' . RP\format_acres( rp_place_stats( $parent )['acres'] ) . ' ' . $parent->name . ' acres' : '' ); ?>
 <div class="wrap">
   <div class="phead">
     <div>
       <div class="eyebrow"><?php echo esc_html( $labels[ $level ] ?? 'Place' ); ?><?php if ( $parent ) { echo ' · ' . esc_html( $parent->name ); } ?></div>
-      <h1><?php echo esc_html( $t->name ); ?></h1>
+      <h1><?php echo esc_html( $filter ? rp_filter_label( $filter ) . ' in ' . $t->name : $t->name ); ?></h1>
       <p class="lead" style="margin-top:14px"><?php echo esc_html( $lead ); ?></p>
-      <?php if ( $acts ) : ?>
+      <?php if ( $acts || $filter ) : ?>
       <div class="chips" style="margin-top:18px">
-        <?php $i = 0; foreach ( $acts as $name => $n ) : if ( $i++ >= 12 ) break; $at = get_term_by( 'name', $name, 'rp_activity' ); ?>
-          <a class="chip" href="<?php echo esc_url( $at ? get_term_link( $at ) : '#' ); ?>"><?php echo esc_html( $name ); ?> <span class="n"><?php echo esc_html( number_format( $n ) ); ?></span></a>
+        <?php if ( $filter ) : ?><a class="chip" href="<?php echo esc_url( get_term_link( $t ) ); ?>">← Everything in <?php echo esc_html( $t->name ); ?></a><?php endif; ?>
+        <?php $i = 0; foreach ( $acts as $name => $n ) : if ( $i++ >= 12 ) break; $at = get_term_by( 'name', $name, 'rp_activity' ); if ( ! $at ) continue; ?>
+          <a class="chip<?php echo $filter && $filter->term_id === $at->term_id ? ' on' : ''; ?>" href="<?php echo esc_url( rp_place_url( $t, $at ) ); ?>"><?php echo esc_html( $name ); ?> <span class="n"><?php echo esc_html( number_format( $n ) ); ?></span></a>
         <?php endforeach; ?>
       </div>
       <?php endif; ?>
@@ -53,7 +56,7 @@ $lead    = sprintf( '%s public places on file across %s acres%s. %s',
     <div>
       <div class="sortbar"><span class="lbl">Sort by</span>
         <?php foreach ( [ 'acres' => 'Acres', 'name' => 'Name', 'checked' => 'Recently added' ] as $k => $lbl ) : ?>
-          <a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', $k, get_term_link( $t ) ) ); ?>"><?php echo esc_html( $lbl ); ?></a>
+          <a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', $k, $base ) ); ?>"><?php echo esc_html( $lbl ); ?></a>
         <?php endforeach; ?>
       </div>
       <div class="plist">
@@ -63,9 +66,9 @@ $lead    = sprintf( '%s public places on file across %s acres%s. %s',
       </div>
       <?php $pages = (int) ceil( $stats['count'] / $per ); if ( $pages > 1 ) : ?>
       <nav class="pager" aria-label="Pages">
-        <?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged - 1, $sort ) ); ?>">← Previous</a><?php endif; ?>
+        <?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( rp_page_link( $base, $paged - 1, $sort ) ); ?>">← Previous</a><?php endif; ?>
         <span>Page <?php echo (int) $paged; ?> of <?php echo (int) $pages; ?></span>
-        <?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged + 1, $sort ) ); ?>">Next →</a><?php endif; ?>
+        <?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( rp_page_link( $base, $paged + 1, $sort ) ); ?>">Next →</a><?php endif; ?>
       </nav>
       <?php endif; ?>
     </div>
