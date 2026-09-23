@@ -36,7 +36,6 @@ $activity = sanitize_text_field( $_GET['activity'] ?? '' );
   </aside>
   <div class="mapwrap" id="mapwrap">
     <div id="map" style="position:absolute;inset:0"></div>
-    <div class="modes" id="modes"><button type="button" data-m="dots" class="on">Places</button><button type="button" data-m="acres">Acres</button><button type="button" data-m="steward">Managed by</button></div>
     <div class="tools"><button type="button" id="locateMe">◎ Locate me</button><button type="button" id="placeMe">✥ Put me here</button><button type="button" id="selArea">▭ Select an area</button><button type="button" id="shareView">⇪ Copy link to this view</button></div>
     <div class="legend" id="legend"></div>
   </div>

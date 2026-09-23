@@ -5,7 +5,7 @@
   if (!root || typeof maplibregl === 'undefined') return;
   var ACTS = RPc.acts || [], STW = { city: '#88B500', county: '#0FB8E6', state: '#FFE66D', federal: '#E85305', tribal: '#C77DFF', other: '#9FB095' };
   var start = {}; try { start = JSON.parse(root.getAttribute('data-start') || '{}'); } catch (e) {}
-  var state = { mode: 'dots', lens: root.getAttribute('data-activity') || '', stw: {}, minAc: 0, noPhoto: false, year: new Date().getFullYear(), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
+  var state = { lens: root.getAttribute('data-activity') || '', stw: {}, minAc: 0, noPhoto: false, year: new Date().getFullYear(), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
   Object.keys(STW).forEach(function (k) { state.stw[k] = true; });
   try { var saved = JSON.parse(localStorage.getItem('rp-me') || 'null'); if (saved) state.me = saved; } catch (e) {}
 
@@ -57,11 +57,10 @@
 
   map.on('load', function () {
     brand();
-    map.addSource('parks', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 48, clusterMaxZoom: 13, clusterProperties: { acres: ['+', ['get', 'ac']] } });
+    map.addSource('parks', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 48, clusterMaxZoom: 13 });
     map.addLayer({ id: 'cl-glow', type: 'circle', source: 'parks', filter: ['has', 'point_count'], paint: { 'circle-color': '#88B500', 'circle-opacity': 0.18, 'circle-radius': ['+', 22, ['*', 3, ['sqrt', ['get', 'point_count']]]] } });
     map.addLayer({ id: 'cl', type: 'circle', source: 'parks', filter: ['has', 'point_count'], paint: { 'circle-color': '#88B500', 'circle-radius': ['+', 14, ['*', 3, ['sqrt', ['get', 'point_count']]]], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
-    map.addLayer({ id: 'cl-n', type: 'symbol', source: 'parks', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 13, 'text-font': ['Noto Sans Bold'], 'text-offset': [0, -0.35] }, paint: { 'text-color': '#14211A' } });
-    map.addLayer({ id: 'cl-a', type: 'symbol', source: 'parks', filter: ['has', 'point_count'], layout: { 'text-field': ['concat', ['case', ['>=', ['get', 'acres'], 1000000], ['concat', ['to-string', ['round', ['/', ['get', 'acres'], 1000000]]], 'M'], ['>=', ['get', 'acres'], 1000], ['concat', ['to-string', ['round', ['/', ['get', 'acres'], 1000]]], 'k'], ['to-string', ['round', ['get', 'acres']]]], ' ac'], 'text-size': 9, 'text-font': ['Noto Sans Regular'], 'text-offset': [0, 0.9] }, paint: { 'text-color': '#1F4A28' } });
+    map.addLayer({ id: 'cl-n', type: 'symbol', source: 'parks', filter: ['has', 'point_count'], layout: { 'text-field': ['get', 'point_count_abbreviated'], 'text-size': 13, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#14211A' } });
     map.addLayer({ id: 'pt', type: 'circle', source: 'parks', filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#88B500', 'circle-radius': 6, 'circle-stroke-color': '#14211A', 'circle-stroke-width': 1.5 } });
     map.addLayer({ id: 'me-ring', type: 'fill', source: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } }, paint: { 'fill-color': '#E85305', 'fill-opacity': 0.08 } });
     map.addLayer({ id: 'me-ring-line', type: 'line', source: 'me-ring', paint: { 'line-color': '#E85305', 'line-width': 1.5, 'line-dasharray': [3, 3] } });
@@ -103,11 +102,8 @@
   }
   function applyMode() {
     if (!map.getLayer('pt')) return;
-    if (state.mode === 'acres') { map.setPaintProperty('pt', 'circle-radius', ['+', 3, ['min', 30, ['*', 0.9, ['sqrt', ['max', 1, ['get', 'ac']]]]]]); map.setPaintProperty('pt', 'circle-color', '#88B500'); }
-    else if (state.mode === 'steward') { map.setPaintProperty('pt', 'circle-radius', 6); map.setPaintProperty('pt', 'circle-color', ['get', 'col']); }
-    else { map.setPaintProperty('pt', 'circle-radius', 6); map.setPaintProperty('pt', 'circle-color', state.lens ? '#FFB300' : '#88B500'); }
-    var l = document.getElementById('legend');
-    l.innerHTML = state.mode === 'steward' ? Object.keys(STW).map(function (k) { return '<span><i style="background:' + STW[k] + '"></i>' + k + '</span>'; }).join('') : state.mode === 'acres' ? '<span>Dot size is acreage</span>' : (state.lens ? '<span><i style="background:#FFB300"></i>' + state.lens + '</span>' : '<span><i style="background:#88B500"></i>Places · clusters show count and acres</span>');
+    map.setPaintProperty('pt', 'circle-radius', 6); map.setPaintProperty('pt', 'circle-color', state.lens ? '#FFB300' : '#88B500');
+    document.getElementById('legend').innerHTML = state.lens ? '<span><i style="background:#FFB300"></i>' + state.lens + '</span>' : '<span><i style="background:#88B500"></i>Places · a number is how many are grouped there</span>';
   }
   function km(a, b) { var R = 6371, dl = (b.lat - a.lat) * Math.PI / 180, dn = (b.lng - a.lng) * Math.PI / 180, x = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(x)); }
   function mins(d) { var sp = state.travelMode === 'walk' ? 5 : state.travelMode === 'bike' ? 15 : 50; return Math.max(1, Math.round(d * 1.25 / sp * 60)); }
@@ -143,7 +139,6 @@
   }
 
   /* controls */
-  document.getElementById('modes').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.classList.remove('on'); }); b.classList.add('on'); state.mode = b.getAttribute('data-m'); applyMode(); });
   var lens = document.getElementById('lens');
   function setLens(v) { state.lens = v; Array.prototype.forEach.call(lens.querySelectorAll('.chip'), function (x) { x.classList.toggle('on', (x.getAttribute('data-a') || '') === v); }); applyMode(); load(); }
   lens.addEventListener('click', function (e) { var b = e.target.closest('button.chip'); if (b) setLens(b.getAttribute('data-a') || ''); });
