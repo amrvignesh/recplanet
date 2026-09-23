@@ -92,7 +92,7 @@ class Counter {
 		global $wpdb;
 		$names = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT city FROM " . table( 'park_index' ) . " WHERE country = %s AND state = %s", $c, $s ) );
 		foreach ( $names as $n ) {
-			if ( legacy_slug( $n ) === $slug ) {
+			if ( null !== $n && '' !== $n && legacy_slug( (string) $n ) === $slug ) {
 				return $n;
 			}
 		}
@@ -102,7 +102,7 @@ class Counter {
 		global $wpdb;
 		$names = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT county FROM " . table( 'park_index' ) . " WHERE country = %s AND state = %s", $c, $s ) );
 		foreach ( $names as $n ) {
-			if ( legacy_slug( $n ) === $slug ) {
+			if ( null !== $n && '' !== $n && legacy_slug( (string) $n ) === $slug ) {
 				return $n;
 			}
 		}

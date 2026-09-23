@@ -51,8 +51,8 @@ function format_acres( float|int|null $acres, int $decimals = 2 ): string {
 }
 
 /** Lower-case, dash-separated slug that matches the old Drupal aliases (they were pathauto defaults). */
-function legacy_slug( string $text ): string {
-	$text = remove_accents( $text );
+function legacy_slug( ?string $text ): string {
+	$text = remove_accents( (string) $text );
 	$text = strtolower( $text );
 	$text = preg_replace( '/[^a-z0-9]+/', '-', $text );
 	return trim( $text, '-' );
