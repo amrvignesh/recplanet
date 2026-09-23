@@ -15,12 +15,12 @@ mk() {
 }
 mk acre-counter "Acre Counter" page-acre-counter.php ""
 mk blog-tags "Blog Tags" page-blog-tags.php ""
-mk contact "Contact Us" "" ~/d6-import/text/contact-page.html
+mk contact "Contact Us" page-contact.php ~/d6-import/text/contact-intro.html
 wp rewrite flush --hard >/dev/null 2>&1
 wp edge-cache purge --domain=recplanet.wpcomstaging.com >/dev/null 2>&1
 for u in "/acre-counter/" "/acre-counter/?country=us" "/acre-counter/?country=us&state=TX" "/blog-tags/" "/contact/"; do
   curl -sL -o /tmp/p.html "https://recplanet.wpcomstaging.com$u"
-  echo "$u errs=$(grep -cE 'Fatal|Warning:' /tmp/p.html) h1=[$(grep -oE '<h1[^>]*>[^<]*' /tmp/p.html | head -1 | sed 's/<h1[^>]*>//')] form=$(grep -c 'wp-block-jetpack-contact-form' /tmp/p.html)"
+  echo "$u errs=$(grep -cE 'Fatal|Warning:' /tmp/p.html) h1=[$(grep -oE '<h1[^>]*>[^<]*' /tmp/p.html | head -1 | sed 's/<h1[^>]*>//')] form=$(grep -c 'id="contactForm"' /tmp/p.html) captcha=$(grep -c 'c_answer' /tmp/p.html)"
 done
 for u in "/acreage" "/blogtags" "/map/node" "/contact-us"; do
   curl -s -o /dev/null -w "%{http_code} %{redirect_url} <- $u\n" "https://recplanet.wpcomstaging.com$u"

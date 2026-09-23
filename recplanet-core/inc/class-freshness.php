@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * "Been here lately? Is this still accurate?" A yes bumps the verified date. A no opens a note
- * that lands in the editor's queue. One answer per park per visitor per 30 days.
+ * that lands in the RecPlanet > Corrections inbox (see Messages). One answer per park per visitor per 30 days.
  */
 class Freshness {
 
@@ -15,9 +15,6 @@ class Freshness {
 				'methods' => 'POST', 'callback' => [ __CLASS__, 'answer' ], 'permission_callback' => '__return_true',
 				'args' => [ 'answer' => [ 'required' => true ], 'note' => [ 'default' => '' ] ],
 			] );
-		} );
-		add_action( 'admin_menu', function () {
-			add_submenu_page( 'edit.php?post_type=' . POST_PARK, 'Corrections', 'Corrections', 'edit_rp_parks', 'rp-corrections', [ __CLASS__, 'queue' ] );
 		} );
 	}
 
@@ -44,13 +41,4 @@ class Freshness {
 		return new \WP_REST_Response( [ 'ok' => true, 'verified_on' => get_post_meta( $id, 'rp_verified_on', true ) ] );
 	}
 
-	public static function queue(): void {
-		global $wpdb;
-		$rows = $wpdb->get_results( "SELECT f.*, p.post_title FROM " . table( 'freshness' ) . " f JOIN {$wpdb->posts} p ON p.ID = f.park_id WHERE f.answer = 'no' ORDER BY f.id DESC LIMIT 200" );
-		echo '<div class="wrap"><h1>Corrections</h1><p>Visitors who tapped "Something changed". Newest first.</p><table class="widefat striped"><thead><tr><th>When</th><th>Park</th><th>Note</th></tr></thead><tbody>';
-		foreach ( $rows as $r ) {
-			printf( '<tr><td>%s</td><td><a href="%s">%s</a></td><td>%s</td></tr>', esc_html( $r->created_at ), esc_url( get_edit_post_link( $r->park_id ) ), esc_html( $r->post_title ), esc_html( $r->note ) );
-		}
-		echo '</tbody></table></div>';
-	}
 }

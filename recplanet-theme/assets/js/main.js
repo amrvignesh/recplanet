@@ -258,4 +258,44 @@
       congrats.hidden = false;
     }).catch(function () {});
   }
+
+  /* ---- contact form: fresh challenge (pages are edge-cached), park suggestions, send without a reload ---- */
+  var cf = $('#contactForm');
+  if (cf) {
+    var cStart = Math.floor(Date.now() / 1000), cAns = $('#c_answer');
+    cf.querySelector('input[name=started]').value = cStart;
+    function freshChallenge() {
+      if (!cAns) return;
+      api('contact/challenge?_=' + Date.now()).then(function (c) {
+        if (c && c.token) { cf.querySelector('.captcha span').textContent = c.question; cf.querySelector('input[name=token]').value = c.token; cAns.value = ''; }
+      }).catch(function () {});
+    }
+    freshChallenge();
+    var cq = $('#c_park'), cl = $('#park_list'), cid = $('#park_id'), ct = null, copts = {};
+    if (cq && cl) {
+      cq.addEventListener('input', function () {
+        cid.value = copts[cq.value] || 0;
+        clearTimeout(ct); if (cq.value.length < 2) return;
+        ct = setTimeout(function () { api('parks/suggest?q=' + encodeURIComponent(cq.value)).then(function (rows) { copts = {}; cl.innerHTML = rows.map(function (r) { copts[r.label] = r.id; return '<option value="' + r.label.replace(/"/g, '&quot;') + '">'; }).join(''); cid.value = copts[cq.value] || 0; }); }, 200);
+      });
+    }
+    var cmsg = $('#contactMsg'), cbtn = cf.querySelector('button[type=submit]');
+    function fail(text) { cmsg.hidden = false; cmsg.className = 'form-msg'; cmsg.textContent = text; cbtn.disabled = false; }
+    cf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var body = {}; new FormData(cf).forEach(function (v, k) { body[k] = v; });
+      var ts = cf.querySelector('input[name="cf-turnstile-response"]'); if (ts) body.turnstile = ts.value;
+      if (!body.name || !body.email || (body.message || '').length < 10 || (cAns && !body.answer)) { fail('A name, a working email, a message and the answer to the sum are needed.'); return; }
+      cbtn.disabled = true; cmsg.hidden = true;
+      api('contact', { method: 'POST', body: body }).then(function (d) {
+        if (d && d.ok) {
+          cf.innerHTML = '<div class="sent"><b>Sent. Thank you.</b><p>It is in the inbox and Taylor will reply to ' + body.email.replace(/</g, '&lt;') + '.</p></div>';
+        } else {
+          fail((d && d.error) || 'Something went wrong. Try again.');
+          freshChallenge();
+          if (window.turnstile) { try { window.turnstile.reset(); } catch (x) {} }
+        }
+      }).catch(function () { fail('The connection dropped. Try again.'); });
+    });
+  }
 })();

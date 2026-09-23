@@ -27,6 +27,9 @@ class Settings {
 		register_setting( self::GROUP, 'rp_contest_days', [ 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 30 ] );
 		register_setting( self::GROUP, 'rp_photo_needs_approval', [ 'type' => 'boolean', 'sanitize_callback' => fn( $v ) => (bool) $v, 'default' => true ] );
 		register_setting( self::GROUP, 'rp_home_text', [ 'type' => 'string', 'sanitize_callback' => 'wp_kses_post', 'default' => '' ] );
+		register_setting( self::GROUP, 'rp_contact_email', [ 'type' => 'string', 'sanitize_callback' => 'sanitize_email', 'default' => '' ] );
+		register_setting( self::GROUP, 'rp_turnstile_site', [ 'type' => 'string', 'sanitize_callback' => fn( $v ) => trim( sanitize_text_field( $v ) ), 'default' => '' ] );
+		register_setting( self::GROUP, 'rp_turnstile_secret', [ 'type' => 'string', 'sanitize_callback' => fn( $v ) => trim( sanitize_text_field( $v ) ), 'default' => '' ] );
 		register_setting( self::GROUP, 'rp_embed_origins', [ 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field', 'default' => '' ] );
 
 		add_settings_section( 'rp_maps', 'Google Maps Platform', fn() => print '<p>The key is stored here and injected into pages at render time. Restrict it to your domain in the Google Cloud console. Enable Maps JavaScript, Static Maps, Street View, Places, Routes, Distance Matrix, Geocoding and Elevation.</p>', 'recplanet' );
@@ -46,6 +49,11 @@ class Settings {
 
 		add_settings_section( 'rp_home', 'Home page text', fn() => print '<p>Shown at the foot of the home page under "About this database, in the founder&rsquo;s words". Plain paragraphs; links allowed.</p>', 'recplanet' );
 		add_settings_field( 'rp_home_text', 'Text', fn() => print '<textarea name="rp_home_text" rows="14" class="large-text">' . esc_textarea( get_option( 'rp_home_text', '' ) ) . '</textarea>', 'recplanet', 'rp_home' );
+
+		add_settings_section( 'rp_contact', 'Contact form', fn() => print '<p>Every message is kept in RecPlanet &rsaquo; Inbox and also emailed. The form has a honeypot, a timing check and a limit of five messages an hour per visitor. Without Turnstile keys it asks a simple sum; with them it shows Cloudflare Turnstile, which is free at <a href="https://dash.cloudflare.com/?to=/:account/turnstile" target="_blank" rel="noopener">dash.cloudflare.com</a>.</p>', 'recplanet' );
+		add_settings_field( 'rp_contact_email', 'Send messages to', function () { self::text( 'rp_contact_email', 'email' ); echo '<p class="description">Empty means the site admin email, ' . esc_html( get_option( 'admin_email' ) ) . '.</p>'; }, 'recplanet', 'rp_contact' );
+		add_settings_field( 'rp_turnstile_site', 'Turnstile site key', fn() => self::text( 'rp_turnstile_site' ), 'recplanet', 'rp_contact' );
+		add_settings_field( 'rp_turnstile_secret', 'Turnstile secret key', fn() => self::text( 'rp_turnstile_secret', 'password' ), 'recplanet', 'rp_contact' );
 
 		add_settings_section( 'rp_embed', 'Embeddable counter', fn() => print '<p>One origin per line, for example https://example.org. Leave empty to allow any site to embed the counter.</p>', 'recplanet' );
 		add_settings_field( 'rp_embed_origins', 'Allowed origins', fn() => print '<textarea name="rp_embed_origins" rows="4" cols="50">' . esc_textarea( get_option( 'rp_embed_origins', '' ) ) . '</textarea>', 'recplanet', 'rp_embed' );

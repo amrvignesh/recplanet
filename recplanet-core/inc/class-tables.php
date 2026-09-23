@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Tables {
 
-	const SCHEMA_VERSION = 3;
+	const SCHEMA_VERSION = 4;
 
 	public static function install(): void {
 		global $wpdb;
@@ -82,8 +82,25 @@ class Tables {
 			answer varchar(8) NOT NULL,
 			note text,
 			created_at datetime NOT NULL,
+			read_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY park (park_id,created_at)
+		) $charset;" );
+
+		// Contact form messages: the site keeps every one, the admin Inbox shows them, unread first.
+		dbDelta( "CREATE TABLE " . table( 'messages' ) . " (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(120) NOT NULL DEFAULT '',
+			email varchar(190) NOT NULL DEFAULT '',
+			subject varchar(120) NOT NULL DEFAULT '',
+			message text,
+			park_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			voter_hash char(40) NOT NULL DEFAULT '',
+			created_at datetime NOT NULL,
+			read_at datetime DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY unread (read_at,id)
 		) $charset;" );
 
 		dbDelta( "CREATE TABLE " . table( 'redirects' ) . " (
