@@ -132,10 +132,10 @@ add_action( 'wp_head', function () {
 			$max = (int) ceil( rp_place_stats( get_queried_object() )['count'] / 50 );
 		}
 		if ( $paged > 1 ) {
-			echo '<link rel="prev" href="' . esc_url( $paged > 2 ? add_query_arg( 'paged', $paged - 1, $base ) : $base ) . '">' . "\n";
+			echo '<link rel="prev" href="' . esc_url( $paged > 2 ? $base . 'page/' . ( $paged - 1 ) . '/' : $base ) . '">' . "\n";
 		}
 		if ( $paged < $max ) {
-			echo '<link rel="next" href="' . esc_url( add_query_arg( 'paged', $paged + 1, $base ) ) . '">' . "\n";
+			echo '<link rel="next" href="' . esc_url( $base . 'page/' . ( $paged + 1 ) . '/' ) . '">' . "\n";
 		}
 	}
 	echo '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' . "\n";
