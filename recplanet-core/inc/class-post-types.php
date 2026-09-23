@@ -38,6 +38,7 @@ class Post_Types {
 			'menu_icon'    => 'dashicons-camera',
 			'menu_position'=> 6,
 			'supports'     => [ 'title', 'editor', 'thumbnail', 'author', 'comments' ],
+			'taxonomies'   => [ 'post_tag' ],
 			'show_in_rest' => true,
 			'capability_type' => [ 'rp_photo', 'rp_photos' ],
 			'map_meta_cap' => true,
@@ -92,7 +93,8 @@ class Post_Types {
 			'rp_votes'        => 'integer',  // cached from rp_votes
 			'rp_score'        => 'number',
 			'rp_legacy_nid'   => 'integer',
-			'rp_legacy_votes' => 'integer',  // frozen Drupal total
+			'rp_legacy_votes' => 'integer',  // frozen Drupal rating count
+			'rp_legacy_score' => 'number',   // frozen Drupal average, in stars
 		];
 		foreach ( $photo as $key => $type ) {
 			register_post_meta( POST_PHOTO, $key, [ 'type' => $type, 'single' => true, 'show_in_rest' => true,

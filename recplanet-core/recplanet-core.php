@@ -27,6 +27,7 @@ require_once RP_CORE_DIR . 'inc/class-rest.php';
 require_once RP_CORE_DIR . 'inc/class-rewrites.php';
 require_once RP_CORE_DIR . 'inc/class-votes.php';
 require_once RP_CORE_DIR . 'inc/class-freshness.php';
+require_once RP_CORE_DIR . 'inc/class-draw.php';
 require_once RP_CORE_DIR . 'inc/class-roles.php';
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -59,5 +60,6 @@ add_action( 'plugins_loaded', function () {
 	RP\Rewrites::init();
 	RP\Votes::init();
 	RP\Freshness::init();
+	RP\Draw::init();
 	RP\Tables::maybe_upgrade();
 } );

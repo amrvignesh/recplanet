@@ -309,11 +309,13 @@ class Import_Command {
 		                              LEFT JOIN {$this->t('users')} u ON u.uid = n.uid
 		                              WHERE n.type = 'photo_contest' ORDER BY n.nid" );
 		foreach ( $rows as $r ) {
-			$votes = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$this->t('votingapi_vote')} WHERE content_type = 'node' AND content_id = %d", $r->nid ) );
+			$v     = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS n, COALESCE(AVG(value),0) AS pct FROM {$this->t('votingapi_vote')} WHERE content_type = 'node' AND content_id = %d", $r->nid ) );
+			$votes = (int) $v->n;
+			$score = round( (float) $v->pct / 20, 1 );   // Fivestar stored 20..100 percent; the old site showed SUM/20
 			$post  = [
 				'post_type' => POST_PHOTO, 'post_title' => $r->title, 'post_content' => $this->clean_html( (string) $r->body ),
 				'post_status' => $r->status ? 'publish' : 'draft', 'post_date' => gmdate( 'Y-m-d H:i:s', (int) $r->created ),
-				'meta_input' => [ 'rp_legacy_nid' => (int) $r->nid, 'rp_contributor' => (string) $r->author, 'rp_contest_id' => $contest, 'rp_legacy_votes' => $votes, 'rp_votes' => $votes ],
+				'meta_input' => [ 'rp_legacy_nid' => (int) $r->nid, 'rp_contributor' => (string) $r->author, 'rp_contest_id' => $contest, 'rp_legacy_votes' => $votes, 'rp_legacy_score' => $score, 'rp_votes' => $votes, 'rp_score' => $score ],
 			];
 			if ( isset( $map[ (int) $r->nid ] ) ) {
 				$post['ID'] = $map[ (int) $r->nid ];
@@ -323,6 +325,10 @@ class Import_Command {
 				continue;
 			}
 			$this->stats['photos'] = ( $this->stats['photos'] ?? 0 ) + 1;
+			$tags = $wpdb->get_col( $wpdb->prepare( "SELECT t.name FROM {$this->t('term_node')} tn JOIN {$this->t('term_data')} t ON t.tid = tn.tid WHERE tn.vid = %d AND t.vid = 6", $r->vid ) );
+			if ( $tags ) {
+				wp_set_object_terms( $id, $tags, 'post_tag' );
+			}
 			if ( ! empty( $a['files'] ) && $r->filepath && ! has_post_thumbnail( $id ) ) {
 				$this->attach_file( $id, rtrim( $a['files'], '/' ) . '/' . preg_replace( '#^sites/default/files/#', '', $r->filepath ) );
 			}
