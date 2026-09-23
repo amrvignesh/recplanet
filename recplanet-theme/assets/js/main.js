@@ -17,7 +17,7 @@
   /* ---- menu: phone toggle, dropdowns on touch, rotating search hint ---- */
   var menuBtn = $('#menuBtn'), menu = $('#menu');
   if (menuBtn && menu) {
-    menuBtn.addEventListener('click', function () { var open = !menu.classList.contains('open'); menu.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); });
+    menuBtn.addEventListener('click', function () { var open = !menu.classList.contains('open'); menu.classList.toggle('open', open); document.body.classList.toggle('menu-open', open); menuBtn.setAttribute('aria-expanded', String(open)); });
     $$('.has-sub > a', menu).forEach(function (a) {
       a.addEventListener('click', function (e) {
         var sub = a.parentElement, touch = window.matchMedia('(hover: none)').matches || window.innerWidth <= 1100;

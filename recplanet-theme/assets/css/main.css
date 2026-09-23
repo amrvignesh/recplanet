@@ -533,3 +533,38 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
 .counter-form select{font-family:inherit;font-size:15px;padding:11px 14px;border-radius:10px;border:0;background:#fff;color:var(--ink);min-width:220px;min-height:44px}
 .prow.total{background:var(--bg-2);font-weight:800}
 .tagcloud{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* ---- two ribbons: the top band (logo, search, account) and the blue menu ribbon beneath it ---- */
+.topbar{background:linear-gradient(180deg,#DFF5FC 0%,#BFEAF7 100%);border-bottom:1px solid rgba(6,110,160,.15)}
+.topbar .wrap{display:flex;align-items:center;gap:18px;min-height:72px;flex-wrap:nowrap}
+.topbar .logo{display:flex;align-items:center;text-decoration:none;filter:drop-shadow(0 2px 4px rgba(0,60,90,.25))}
+.topbar .logo img{height:46px;width:auto;display:block}
+.topbar .search{flex:0 1 380px;min-width:160px;position:relative;margin:0 auto}
+.topbar .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%)}
+.topbar .search input{width:100%;font-family:inherit;font-size:14px;padding:11px 14px 11px 38px;border-radius:999px;border:1px solid rgba(6,110,160,.2);background:#fff;color:var(--ink);min-height:42px}
+.topbar .account{display:flex;align-items:center;gap:10px;margin-left:auto;white-space:nowrap}
+.topbar .join{background:var(--orange);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:10px 18px;border-radius:999px;box-shadow:0 6px 14px -6px rgba(200,60,0,.6)}
+.topbar .signin{color:#0A6F98;text-decoration:none;font-weight:700;font-size:14px;padding:8px 6px}
+.topbar .acre-chip{color:#0A6F98;background:rgba(10,111,152,.1)}
+.topbar .menu-btn{display:none;background:transparent;border:0;padding:8px;cursor:pointer;min-width:44px;min-height:44px;color:#0A6F98;margin-left:auto}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:linear-gradient(180deg,#22D3F0 0%,#0FB8E6 55%,#0A9FD2 100%);box-shadow:0 6px 22px -10px rgba(6,90,130,.6)}
+.bar .wrap{display:flex;align-items:center;min-height:52px;gap:0}
+.bar nav{display:flex;gap:4px;margin:0;align-items:center;flex-wrap:nowrap;width:100%;justify-content:space-between}
+.bar nav > a,.bar nav .has-sub > a{padding:10px 14px;font-size:14.5px;gap:8px}
+.bar nav a svg{width:17px;height:17px;display:inline}
+.bar nav .lbl{display:inline}
+.bar .menu-btn,.bar .search,.bar .join,.bar .acre-chip{display:none}
+@media (max-width:1560px){.bar nav > a,.bar nav .has-sub > a{padding:10px 12px;font-size:14px}}
+@media (max-width:1360px){.bar nav > a svg,.bar nav .has-sub > a svg{display:inline}.topbar .search{flex-basis:280px}}
+@media (max-width:1100px){
+  .topbar .search,.topbar .account{display:none}
+  .topbar .menu-btn{display:inline-flex;align-items:center;justify-content:center}
+  .topbar .wrap{min-height:60px}
+  .topbar .logo img{height:38px}
+  .bar{position:static;box-shadow:none}
+  .bar .wrap{min-height:0}
+  .bar nav{display:none;position:static;background:transparent;flex-direction:column;align-items:stretch;padding:8px 0 12px;width:100%}
+  .bar nav.open{display:flex}
+  .bar nav > a,.bar nav .has-sub > a{padding:12px 10px;font-size:16px;border-radius:10px}
+  body.menu-open .bar{display:block}
+}
