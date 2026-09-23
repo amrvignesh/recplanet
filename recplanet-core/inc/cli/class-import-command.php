@@ -61,6 +61,9 @@ class Import_Command {
 	 *
 	 * [--files=<path>]
 	 * : Absolute path of the copied sites/default/files folder, for images.
+	 *
+	 * [--after=<nid>]
+	 * : Only nodes with a nid greater than this. For running the import in batches.
 	 */
 	public function import( array $args, array $assoc ): void {
 		$this->p = $assoc['prefix'] ?? 'd6_';
@@ -105,6 +108,7 @@ class Import_Command {
 		global $wpdb;
 		$since = ! empty( $a['since'] ) ? strtotime( $a['since'] ) : 0;
 		$limit = (int) ( $a['limit'] ?? 0 );
+		$after = (int) ( $a['after'] ?? 0 );
 		$dry   = isset( $a['dry-run'] );
 		$map   = $this->id_map( POST_PARK );
 
@@ -113,7 +117,7 @@ class Import_Command {
 		        FROM {$this->t('node')} n
 		        JOIN {$this->t('node_revisions')} r ON r.vid = n.vid
 		        LEFT JOIN {$this->t('content_type_world_parks')} p ON p.vid = n.vid
-		        WHERE n.type = 'world_parks'" . ( $since ? $wpdb->prepare( ' AND n.changed >= %d', $since ) : '' ) . ' ORDER BY n.nid' . ( $limit ? " LIMIT $limit" : '' );
+		        WHERE n.type = 'world_parks'" . ( $since ? $wpdb->prepare( ' AND n.changed >= %d', $since ) : '' ) . ( $after ? $wpdb->prepare( ' AND n.nid > %d', $after ) : '' ) . ' ORDER BY n.nid' . ( $limit ? " LIMIT $limit" : '' );
 		$nodes = $wpdb->get_results( $sql );
 		$total = count( $nodes );
 		WP_CLI::log( "$total park nodes to process." );
@@ -211,8 +215,11 @@ class Import_Command {
 		}
 		$progress->finish();
 		Counter::suspend( false );
-		if ( ! $dry ) {
+		if ( ! $dry && ! $limit ) {
 			Counter::rebuild_rollups();
+		}
+		if ( ! empty( $nodes ) ) {
+			$this->stats['last_nid'] = (int) end( $nodes )->nid;
 		}
 	}
 

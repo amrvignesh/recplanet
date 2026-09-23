@@ -86,6 +86,7 @@ class Rewrites {
 		if ( $level ) {
 			$term = self::find_place( $level, strtolower( (string) $q->get( 'rp_country' ) ) ?: 'us', (string) $q->get( 'rp_state' ), (string) $q->get( 'rp_county' ), (string) $q->get( 'rp_city' ) );
 			if ( $term ) {
+				$q->set( 'rp_place_level', '' );
 				$q->set( 'taxonomy', TAX_PLACE );
 				$q->set( 'term', $term->slug );
 				$q->set( 'rp_place', $term->slug );
@@ -94,11 +95,25 @@ class Rewrites {
 				$q->set( 'orderby', 'meta_value_num' );
 				$q->set( 'meta_key', 'rp_acreage' );
 				$q->set( 'order', 'DESC' );
-				$q->is_tax = true; $q->is_archive = true; $q->is_404 = false;
-				$q->queried_object = $term; $q->queried_object_id = $term->term_id;
-			} else {
-				$q->set_404();
+				$q->set( 'tax_query', [ [ 'taxonomy' => TAX_PLACE, 'field' => 'term_id', 'terms' => $term->term_id, 'include_children' => true ] ] );
+				self::flags( $q, 'tax', $term );
+				return;
 			}
+			// /{state}/{slug}: a park that has no city on record (national forests, wildlife areas).
+			if ( 'city' === $level ) {
+				$park = get_posts( [ 'post_type' => POST_PARK, 'name' => (string) $q->get( 'rp_city' ), 'post_status' => 'publish', 'posts_per_page' => 1,
+					'meta_query' => [ [ 'key' => 'rp_state', 'value' => strtoupper( (string) $q->get( 'rp_state' ) ) ] ] ] );
+				if ( $park ) {
+					$q->set( 'rp_place_level', '' );
+					$q->set( 'post_type', POST_PARK );
+					$q->set( 'name', $park[0]->post_name );
+					$q->set( 'p', $park[0]->ID );
+					$q->set( 'rp_city', '' );
+					self::flags( $q, 'single', $park[0] );
+					return;
+				}
+			}
+			$q->set_404();
 			return;
 		}
 		// Park with the same slug in two cities: pin it to the place in the URL.
@@ -112,6 +127,17 @@ class Rewrites {
 			}
 			$q->set( 'meta_query', $meta );
 		}
+	}
+
+	/** WordPress decided is_home before we changed the query; set the flags it will read for the template. */
+	private static function flags( \WP_Query $q, string $kind, $obj ): void {
+		$q->is_home = false; $q->is_front_page = false; $q->is_404 = false; $q->is_page = false;
+		if ( 'tax' === $kind ) {
+			$q->is_tax = true; $q->is_archive = true; $q->is_single = false; $q->is_singular = false;
+		} else {
+			$q->is_tax = false; $q->is_archive = false; $q->is_single = true; $q->is_singular = true;
+		}
+		$q->queried_object = $obj; $q->queried_object_id = 'tax' === $kind ? $obj->term_id : $obj->ID;
 	}
 
 	private static function find_place( string $level, string $country, string $state, string $county, string $city ): ?\WP_Term {

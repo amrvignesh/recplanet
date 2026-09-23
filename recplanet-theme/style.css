@@ -1,0 +1,11 @@
+/*
+Theme Name:  RecPlanet
+Theme URI:   https://recplanet.com
+Description: Where the world is your playground. The RecPlanet theme: the acre counter, the atlas, 67,000 hand-made park records, the photo contest.
+Author:      RecPlanet
+Version:     0.1.0
+Requires at least: 6.4
+Requires PHP: 8.1
+Text Domain: recplanet
+*/
+/* Styles live in assets/css/main.css and assets/css/atlas.css, enqueued from functions.php. */

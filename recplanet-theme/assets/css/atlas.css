@@ -1,0 +1,40 @@
+.atlas2{display:grid;grid-template-columns:290px 1fr 320px;height:calc(100vh - 62px - env(safe-area-inset-top,0px));min-height:560px;background:var(--card)}
+@media (max-width:1000px){.atlas2{grid-template-columns:1fr;height:auto}.atlas2 .mapwrap{height:60vh}}
+.atlas2 aside{padding:16px 18px;display:flex;flex-direction:column;gap:16px;background:var(--bg-2);overflow:auto}
+.atlas2 aside h4{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.atlas2 .mapwrap{position:relative;background:#14211A;overflow:hidden}
+.atlas2 canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.atlas2 canvas.placing{cursor:crosshair}
+.atlas2 .modes{position:absolute;left:14px;top:14px;display:flex;gap:4px;background:#14211A;padding:4px;border-radius:999px;box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
+.atlas2 .modes button{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:12px;padding:7px 12px;border-radius:999px;border:0;background:transparent;color:#C6D2C0;cursor:pointer;min-height:34px}
+.atlas2 .modes button.on{background:var(--lime);color:#14211A}
+.atlas2 .tools{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:6px}
+.atlas2 .tools button{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:10px;border:0;background:#14211A;color:#fff;cursor:pointer;min-height:36px;box-shadow:0 8px 20px -10px rgba(0,0,0,.8);text-align:left}
+.atlas2 .tools button.on{background:var(--orange)}
+.atlas2 .timebar{position:absolute;left:14px;right:14px;bottom:14px;background:#14211A;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;color:#fff;box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
+.atlas2 .timebar input[type=range]{flex:1;accent-color:var(--lime)}
+.atlas2 .timebar b{font-family:'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;min-width:44px;text-align:center;font-size:16px}
+.atlas2 .timebar button{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:12px;padding:7px 12px;border-radius:999px;border:0;background:var(--lime);color:#14211A;cursor:pointer;min-height:32px}
+.atlas2 .timebar small{color:#C6D2C0;font-size:11px;white-space:nowrap}
+.atlas2 .tip{position:absolute;pointer-events:none;background:#14211A;color:#fff;border-radius:10px;padding:9px 12px;font-size:12px;max-width:240px;box-shadow:0 8px 20px -10px rgba(0,0,0,.8);display:none}
+.atlas2 .tip b{font-family:'Bricolage Grotesque',sans-serif;font-size:14px;display:block}
+.atlas2 .tip span{color:#C6D2C0}
+.atlas2 .legend{position:absolute;left:14px;bottom:70px;background:rgba(20,33,26,.9);color:#C6D2C0;border-radius:10px;padding:8px 12px;font-size:11px;display:flex;gap:10px;flex-wrap:wrap}
+.atlas2 .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+.atlas2 .rp{display:flex;flex-direction:column;overflow:auto;border-left:1px solid var(--line)}
+.atlas2 .rp .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.atlas2 .rp .hd .big{display:flex;gap:18px}
+.atlas2 .rp .hd .big div{display:flex;flex-direction:column}
+.atlas2 .rp .hd .big b{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-variant-numeric:tabular-nums}
+.atlas2 .rp .hd .big small{color:var(--muted)}
+.atlas2 .rp a.it{padding:12px 18px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:3px}
+.atlas2 .rp a.it:hover{background:var(--bg-2)}
+.atlas2 .rp a.it .m{display:flex;justify-content:space-between;font-size:12px;font-weight:700}
+.atlas2 .rp a.it .m .w{color:var(--orange)}.atlas2 .rp a.it .m .a{color:var(--muted)}
+.atlas2 .rp a.it b{font-family:'Bricolage Grotesque',sans-serif;font-size:15px}
+.atlas2 .rp a.it small{color:var(--muted)}
+.atlas2 .rp .sel{padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.atlas2 .rp .sel .bars a{grid-template-columns:110px 1fr 40px;font-size:13px}
+.atlas2 .rp .empty{padding:18px;color:var(--muted);font-size:13px}
+.atlas2 .chips .chip{padding:7px 12px;min-height:38px;font-size:13px}
+.atlas2 .note{font-size:12px;color:var(--muted)}
