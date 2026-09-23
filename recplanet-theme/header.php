@@ -25,9 +25,10 @@ $rp_here   = fn( string $slug ) => is_page( $slug ) ? ' aria-current="page" clas
     </form>
     <button class="menu-btn" type="button" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg></button>
     <nav id="menu" aria-label="Primary">
-      <a href="<?php echo esc_url( home_url( '/atlas/' ) ); ?>"<?php echo $rp_here( 'atlas' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a6 6 0 0 1 6 6c0 4.5-6 10-6 10S4 12.5 4 8a6 6 0 0 1 6-6z"/><circle cx="10" cy="8" r="2.2" fill="#0FB8E6" stroke="none"/></svg>Near Me</a>
+      <form class="menu-search" role="search" action="<?php echo esc_url( home_url( '/' ) ); ?>" method="get"><label for="qm" class="visually-hidden">Search</label><input id="qm" type="search" name="s" placeholder="Search parks, cities, activities"><button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13l4.5 4.5"/></svg></button></form>
+      <a href="<?php echo esc_url( home_url( '/atlas/' ) ); ?>"<?php echo $rp_here( 'atlas' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2a6 6 0 0 1 6 6c0 4.5-6 10-6 10S4 12.5 4 8a6 6 0 0 1 6-6z"/><circle cx="10" cy="8" r="2.2" fill="#0FB8E6" stroke="none"/></svg><span class="lbl">Near Me</span></a>
       <div class="has-sub">
-        <a href="<?php echo esc_url( home_url( '/states/' ) ); ?>"<?php echo $rp_here( 'states' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l6-2 6 2 4-1v11l-4 1-6-2-6 2z"/><path d="M8 3v11M14 5v11"/></svg>Parks by State</a>
+        <a href="<?php echo esc_url( home_url( '/states/' ) ); ?>"<?php echo $rp_here( 'states' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 5l6-2 6 2 4-1v11l-4 1-6-2-6 2z"/><path d="M8 3v11M14 5v11"/></svg><span class="lbl">Parks by State</span></a>
         <div class="sub">
           <div class="sub-grid">
             <?php foreach ( $rp_states as $st ) : $s = rp_place_stats( $st ); ?><a href="<?php echo esc_url( get_term_link( $st ) ); ?>"><b><?php echo esc_html( $st->name ); ?></b><span><?php echo esc_html( number_format( $s['count'] ) ); ?> places</span></a><?php endforeach; ?>
@@ -35,9 +36,9 @@ $rp_here   = fn( string $slug ) => is_page( $slug ) ? ' aria-current="page" clas
           <a class="sub-all" href="<?php echo esc_url( home_url( '/states/' ) ); ?>">Every state, A to Z →</a>
         </div>
       </div>
-      <a href="<?php echo esc_url( home_url( '/world/' ) ); ?>"<?php echo $rp_here( 'world' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2c3 3 3 13 0 16M10 2c-3 3-3 13 0 16"/></svg>World Parks</a>
+      <a href="<?php echo esc_url( home_url( '/world/' ) ); ?>"<?php echo $rp_here( 'world' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M2 10h16M10 2c3 3 3 13 0 16M10 2c-3 3-3 13 0 16"/></svg><span class="lbl">World Parks</span></a>
       <div class="has-sub">
-        <a href="<?php echo esc_url( home_url( '/activities/' ) ); ?>"<?php echo $rp_here( 'activities' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="12" cy="3.5" r="1.8"/><path d="M9 6l-3 8M9 6l5 3v6M9 6l-4 3M10 12l-3 6"/></svg>Activities</a>
+        <a href="<?php echo esc_url( home_url( '/activities/' ) ); ?>"<?php echo $rp_here( 'activities' ); ?>><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="12" cy="3.5" r="1.8"/><path d="M9 6l-3 8M9 6l5 3v6M9 6l-4 3M10 12l-3 6"/></svg><span class="lbl">Activities</span></a>
         <div class="sub">
           <div class="sub-chips">
             <?php foreach ( $rp_acts as $a ) : ?><a class="chip" href="<?php echo esc_url( get_term_link( $a ) ); ?>"><?php echo esc_html( $a->name ); ?> <span class="n"><?php echo esc_html( number_format( $a->count ) ); ?></span></a><?php endforeach; ?>
@@ -45,9 +46,9 @@ $rp_here   = fn( string $slug ) => is_page( $slug ) ? ' aria-current="page" clas
           <a class="sub-all" href="<?php echo esc_url( home_url( '/activities/' ) ); ?>">All 44 activities →</a>
         </div>
       </div>
-      <a href="<?php echo esc_url( home_url( '/contest/' ) ); ?>"<?php echo is_post_type_archive( 'rp_contest' ) || is_singular( [ 'rp_contest', 'rp_photo' ] ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="16" height="11" rx="2"/><path d="M7 6l1.5-2.5h3L13 6"/><circle cx="10" cy="11.5" r="3"/></svg>Photo Contest</a>
-      <a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>"<?php echo is_home() || is_singular( 'post' ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h9l3 3v11H4z"/><path d="M7 9h6M7 12h6M7 15h4"/></svg>Blog</a>
-      <a class="dice" href="<?php echo esc_url( home_url( '/random/' ) ); ?>" title="Take me to a random place"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="13" r="1.3" fill="#fff" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="7" cy="13" r="1.3" fill="#fff" stroke="none"/></svg>Surprise Me</a>
+      <a href="<?php echo esc_url( home_url( '/contest/' ) ); ?>"<?php echo is_post_type_archive( 'rp_contest' ) || is_singular( [ 'rp_contest', 'rp_photo' ] ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="16" height="11" rx="2"/><path d="M7 6l1.5-2.5h3L13 6"/><circle cx="10" cy="11.5" r="3"/></svg><span class="lbl">Photo Contest</span></a>
+      <a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>"<?php echo is_home() || is_singular( 'post' ) ? ' class="on"' : ''; ?>><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h9l3 3v11H4z"/><path d="M7 9h6M7 12h6M7 15h4"/></svg><span class="lbl">Blog</span></a>
+      <a class="dice" href="<?php echo esc_url( home_url( '/random/' ) ); ?>" title="Take me to a random place"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="3"/><circle cx="7" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="13" r="1.3" fill="#fff" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="#fff" stroke="none"/><circle cx="13" cy="7" r="1.3" fill="#fff" stroke="none"/><circle cx="7" cy="13" r="1.3" fill="#fff" stroke="none"/></svg><span class="lbl">Surprise Me</span></a>
       <div class="menu-mobile-extra">
         <?php if ( ! is_front_page() ) : ?><a href="<?php echo esc_url( home_url( '/' ) ); ?>">Home</a><?php endif; ?>
         <a href="<?php echo esc_url( home_url( '/about-us/' ) ); ?>">About</a>
