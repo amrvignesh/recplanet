@@ -182,6 +182,17 @@
     });
   });
 
+  /* ---- park name suggestions on the upload form ---- */
+  var pq = $('#park_q'), pl = $('#park_list'), pid = $('#park_id');
+  if (pq && pl) {
+    var t = null, opts = {};
+    pq.addEventListener('input', function () {
+      pid.value = opts[pq.value] || 0;
+      clearTimeout(t); if (pq.value.length < 2) return;
+      t = setTimeout(function () { api('parks/suggest?q=' + encodeURIComponent(pq.value)).then(function (rows) { opts = {}; pl.innerHTML = rows.map(function (r) { opts[r.label] = r.id; return '<option value="' + r.label.replace(/"/g, '&quot;') + '">'; }).join(''); pid.value = opts[pq.value] || 0; }); }, 200);
+    });
+  }
+
   /* ---- the voter prize notice ---- */
   var congrats = $('#congrats');
   if (congrats) {

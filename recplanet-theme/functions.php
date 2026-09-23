@@ -11,6 +11,7 @@ define( 'RP_THEME_URI', get_template_directory_uri() );
 
 require_once RP_THEME_DIR . '/inc/template-tags.php';
 require_once RP_THEME_DIR . '/inc/queries.php';
+require_once RP_THEME_DIR . '/inc/upload.php';
 
 add_action( 'after_setup_theme', function () {
 	add_theme_support( 'title-tag' );
