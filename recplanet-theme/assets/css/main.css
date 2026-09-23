@@ -452,3 +452,47 @@ body.trip-hiker .trip .sign line{stroke:#8A6A3F}
 .worldmap .wdot:hover circle:last-of-type{stroke:#FFE66D;stroke-width:3}
 .worldmap .wdot:focus-visible circle{stroke:var(--orange);stroke-width:3}
 h1.tag{font-weight:600;margin:0;letter-spacing:0}
+
+/* ---- the menu: icons, dropdowns, the acre chip, the phone tab bar ---- */
+.bar .wrap{gap:14px}
+.bar nav{display:flex;gap:2px;margin-left:auto;align-items:center}
+.bar nav > a,.bar nav .has-sub > a{color:#fff;text-decoration:none;font-weight:700;font-size:13.5px;padding:8px 11px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:background .2s}
+.bar nav a svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.bar nav > a:hover,.bar nav > a.on,.bar nav .has-sub:hover > a,.bar nav .has-sub > a.on,.bar nav .has-sub:focus-within > a{background:rgba(255,255,255,.22)}
+.bar nav a.dice{background:rgba(232,83,5,.85)}
+.bar nav a.dice:hover{background:var(--orange)}
+.bar nav .has-sub{position:relative}
+.bar nav .sub{position:absolute;left:0;top:calc(100% + 8px);background:var(--card);color:var(--ink);border-radius:16px;box-shadow:0 22px 50px -20px rgba(0,40,60,.6);padding:14px;min-width:340px;display:none;z-index:60;border:1px solid var(--line)}
+.bar nav .has-sub:hover .sub,.bar nav .has-sub:focus-within .sub,.bar nav .has-sub.open .sub{display:block}
+.bar nav .sub-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.bar nav .sub-grid a{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:10px;text-decoration:none;color:var(--ink)}
+.bar nav .sub-grid a:hover{background:var(--bg-2)}
+.bar nav .sub-grid b{font-family:'Bricolage Grotesque',sans-serif;font-size:14px}
+.bar nav .sub-grid span{font-size:11px;color:var(--muted)}
+.bar nav .sub-chips{display:flex;flex-wrap:wrap;gap:6px;max-width:440px}
+.bar nav .sub-chips .chip{padding:7px 12px;min-height:36px;font-size:13px}
+.bar nav .sub-all{display:block;margin-top:10px;font-size:13px;font-weight:800;color:var(--lime-deep);text-decoration:none}
+.bar .menu-mobile-extra{display:none}
+.bar .menu-btn{display:none;background:transparent;border:0;padding:8px;cursor:pointer;min-width:44px;min-height:44px;margin-left:auto}
+.acre-chip{display:inline-flex;align-items:baseline;gap:4px;text-decoration:none;color:#fff;background:rgba(0,0,0,.18);padding:7px 12px;border-radius:999px;white-space:nowrap}
+.acre-chip b{font-size:15px}.acre-chip span{font-size:11px;opacity:.85}
+.tabbar{display:none}
+@media (max-width:1100px){
+  .bar .search{display:none}
+  .bar .menu-btn{display:inline-flex;align-items:center;justify-content:center}
+  .bar nav{display:none;position:absolute;left:0;right:0;top:100%;background:#0A9FD2;flex-direction:column;align-items:stretch;padding:10px 16px 16px;gap:2px;box-shadow:0 20px 40px -20px rgba(0,0,0,.5)}
+  .bar nav.open{display:flex}
+  .bar nav > a,.bar nav .has-sub > a{padding:12px 10px;font-size:16px;border-radius:10px}
+  .bar nav .sub{position:static;display:none;margin:4px 0 8px;min-width:0}
+  .bar nav .has-sub.open .sub{display:block}
+  .bar nav .sub-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bar .menu-mobile-extra{display:flex;gap:2px;flex-direction:column;border-top:1px solid rgba(255,255,255,.2);margin-top:6px;padding-top:6px}
+  .bar .menu-mobile-extra a{color:#fff;text-decoration:none;font-weight:700;padding:12px 10px;font-size:16px}
+  .acre-chip{display:none}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:55;background:#14211A;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px));justify-content:space-around;box-shadow:0 -10px 30px -12px rgba(0,0,0,.5)}
+  .tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;color:#C9BFA6;text-decoration:none;font-size:11px;font-weight:700;min-width:56px;min-height:44px;justify-content:center}
+  .tabbar a.on,.tabbar a:hover{color:var(--lime)}
+  .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  body{padding-bottom:64px}
+  .trip{display:none}
+}

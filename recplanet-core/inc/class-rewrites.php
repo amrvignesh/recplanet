@@ -22,6 +22,7 @@ class Rewrites {
 		add_filter( 'term_link', [ __CLASS__, 'place_link' ], 10, 3 );
 		add_action( 'pre_get_posts', [ __CLASS__, 'resolve' ] );
 		add_action( 'template_redirect', [ __CLASS__, 'legacy_redirect' ], 1 );
+		add_action( 'template_redirect', [ __CLASS__, 'random_park' ], 0 );
 	}
 
 	public static function rules(): void {
@@ -184,6 +185,20 @@ class Rewrites {
 		}
 		$t = get_terms( [ 'taxonomy' => TAX_PLACE, 'slug' => $slug, 'parent' => $parent, 'hide_empty' => false, 'number' => 1 ] );
 		return ( $t && ! is_wp_error( $t ) ) ? $t[0] : null;
+	}
+
+	/** /random/ sends the visitor to a random published park. Spin the globe. */
+	public static function random_park(): void {
+		$path = trim( (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' );
+		if ( 'random' !== $path ) {
+			return;
+		}
+		global $wpdb;
+		$n  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . table( 'park_index' ) );
+		$id = $n ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM " . table( 'park_index' ) . " LIMIT 1 OFFSET %d", random_int( 0, max( 0, $n - 1 ) ) ) ) : 0;
+		nocache_headers();
+		wp_redirect( $id ? get_permalink( $id ) : home_url( '/atlas/' ), 302 );
+		exit;
 	}
 
 	/** 404 → look the old path up → 301. One indexed query, only on misses. */

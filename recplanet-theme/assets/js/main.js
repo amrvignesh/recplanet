@@ -14,6 +14,25 @@
   function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
   function fmtAc(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
+  /* ---- menu: phone toggle, dropdowns on touch, rotating search hint ---- */
+  var menuBtn = $('#menuBtn'), menu = $('#menu');
+  if (menuBtn && menu) {
+    menuBtn.addEventListener('click', function () { var open = !menu.classList.contains('open'); menu.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); });
+    $$('.has-sub > a', menu).forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var sub = a.parentElement, touch = window.matchMedia('(hover: none)').matches || window.innerWidth <= 1100;
+        if (touch && !sub.classList.contains('open')) { e.preventDefault(); $$('.has-sub.open', menu).forEach(function (o) { if (o !== sub) o.classList.remove('open'); }); sub.classList.add('open'); }
+      });
+    });
+    document.addEventListener('click', function (e) { if (!menu.contains(e.target) && e.target !== menuBtn) $$('.has-sub.open', menu).forEach(function (o) { o.classList.remove('open'); }); });
+  }
+  var q = $('#q');
+  if (q && q.getAttribute('data-hints') && !q.value) {
+    var hints = q.getAttribute('data-hints').split('|'), hi = Math.floor(Math.random() * hints.length);
+    q.placeholder = hints[hi];
+    if (!reduce) setInterval(function () { if (document.activeElement === q || q.value) return; hi = (hi + 1) % hints.length; q.placeholder = hints[hi]; }, 4000);
+  }
+
   /* ---- parallax ---- */
   var layers = $$('[data-depth]'), ticking = false;
   function update() {
