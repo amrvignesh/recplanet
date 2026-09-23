@@ -26,6 +26,7 @@
     });
     document.addEventListener('click', function (e) { if (!menu.contains(e.target) && e.target !== menuBtn) $$('.has-sub.open', menu).forEach(function (o) { o.classList.remove('open'); }); });
   }
+  $$('a[href$="/random/"]').forEach(function (a) { a.addEventListener('click', function () { a.href = a.href.split('?')[0] + '?r=' + Date.now(); }); });
   var q = $('#q');
   if (q && q.getAttribute('data-hints') && !q.value) {
     var hints = q.getAttribute('data-hints').split('|'), hi = Math.floor(Math.random() * hints.length);
