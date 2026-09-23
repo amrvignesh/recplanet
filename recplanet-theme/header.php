@@ -44,6 +44,14 @@ $rp_icons  = [
     </div>
     <button class="menu-btn" type="button" id="menuBtn" aria-expanded="false" aria-controls="menu" aria-label="Menu"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h16M3 11h16M3 16h16"/></svg></button>
   </div>
+  <?php $rp_board = RP\Settings::board(); if ( '' !== $rp_board ) : ?>
+  <div class="board" role="note" aria-label="Notice">
+    <div class="wrap">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8v4h3l6 4V4L6 8z"/><path d="M15 7.5a3.5 3.5 0 0 1 0 5"/></svg>
+      <p><?php echo wp_kses_post( $rp_board ); ?></p>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
 <div class="bar" id="bar">
   <div class="wrap">

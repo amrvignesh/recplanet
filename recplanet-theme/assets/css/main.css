@@ -596,3 +596,13 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
 .contact-form .sent{text-align:center;padding:30px 10px}
 .contact-form .sent b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:26px;margin-bottom:8px}
 .contact-form .sent p{color:var(--muted);font-size:15px}
+
+/* ---- header message board (Settings > RecPlanet > Message board) ---- */
+.topbar .board{border-top:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.12)}
+.topbar .board .wrap{min-height:0;padding:7px 0 8px;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.94)}
+.topbar .board svg{flex:none;width:18px;height:18px;margin-top:2px;fill:none;stroke:#C6F06A;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.topbar .board p{margin:0}
+.topbar .board a{color:#D7F58A;font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.topbar .board a:hover{color:#fff}
+.topbar .board strong{color:#fff}
+@media (max-width:1100px){.topbar .board .wrap{font-size:13px;padding:7px 0}}

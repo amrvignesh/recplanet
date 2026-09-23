@@ -11,6 +11,17 @@ class Settings {
 
 	const GROUP = 'recplanet';
 
+	/** The old site's header message board, with its links pointed at the new pages. */
+	const DEFAULT_BOARD = 'Welcome to RecPlanet. Visit the <a href="/contest/">contest</a> page for over <strong>$4000</strong> in prizes. You can win a prize simply by voting (membership not required to vote). Search our database for info on thousands of parks. Blog for royalties, use the <a href="/contact/">Contact Us</a> link for more information.';
+
+	/** The header message board's HTML, or an empty string when it is switched off or empty. */
+	public static function board(): string {
+		if ( ! get_option( 'rp_board_on', true ) ) {
+			return '';
+		}
+		return trim( (string) get_option( 'rp_board_text', self::DEFAULT_BOARD ) );
+	}
+
 	public static function init(): void {
 		add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
 		add_action( 'admin_init', [ __CLASS__, 'register' ] );
@@ -26,6 +37,8 @@ class Settings {
 		register_setting( self::GROUP, 'rp_counter_headline', [ 'type' => 'string', 'sanitize_callback' => fn( $v ) => in_array( $v, [ 'world', 'us' ], true ) ? $v : 'world', 'default' => 'world' ] );
 		register_setting( self::GROUP, 'rp_contest_days', [ 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 30 ] );
 		register_setting( self::GROUP, 'rp_photo_needs_approval', [ 'type' => 'boolean', 'sanitize_callback' => fn( $v ) => (bool) $v, 'default' => true ] );
+		register_setting( self::GROUP, 'rp_board_on', [ 'type' => 'boolean', 'sanitize_callback' => fn( $v ) => (bool) $v, 'default' => true ] );
+		register_setting( self::GROUP, 'rp_board_text', [ 'type' => 'string', 'sanitize_callback' => 'wp_kses_post', 'default' => self::DEFAULT_BOARD ] );
 		register_setting( self::GROUP, 'rp_home_text', [ 'type' => 'string', 'sanitize_callback' => 'wp_kses_post', 'default' => '' ] );
 		register_setting( self::GROUP, 'rp_contact_email', [ 'type' => 'string', 'sanitize_callback' => 'sanitize_email', 'default' => '' ] );
 		register_setting( self::GROUP, 'rp_turnstile_site', [ 'type' => 'string', 'sanitize_callback' => fn( $v ) => trim( sanitize_text_field( $v ) ), 'default' => '' ] );
@@ -46,6 +59,10 @@ class Settings {
 		add_settings_section( 'rp_contest', 'Contest and photos', '__return_null', 'recplanet' );
 		add_settings_field( 'rp_contest_days', 'Default contest length (days)', fn() => self::text( 'rp_contest_days', 'number' ), 'recplanet', 'rp_contest' );
 		add_settings_field( 'rp_photo_needs_approval', 'Uploads', fn() => print '<label><input type="checkbox" name="rp_photo_needs_approval" value="1" ' . checked( get_option( 'rp_photo_needs_approval', true ), true, false ) . '> An editor approves photos before they show</label>', 'recplanet', 'rp_contest' );
+
+		add_settings_section( 'rp_board', 'Message board', fn() => print '<p>The short notice in the header under the logo, on every page, as on the old site. A sentence or two; links and bold allowed. Leave the box empty or untick to hide it.</p>', 'recplanet' );
+		add_settings_field( 'rp_board_on', 'Show', fn() => print '<label><input type="checkbox" name="rp_board_on" value="1" ' . checked( get_option( 'rp_board_on', true ), true, false ) . '> Show the message board</label>', 'recplanet', 'rp_board' );
+		add_settings_field( 'rp_board_text', 'Message', fn() => print '<textarea name="rp_board_text" rows="4" class="large-text">' . esc_textarea( get_option( 'rp_board_text', self::DEFAULT_BOARD ) ) . '</textarea>', 'recplanet', 'rp_board' );
 
 		add_settings_section( 'rp_home', 'Home page text', fn() => print '<p>Shown at the foot of the home page under "About this database, in the founder&rsquo;s words". Plain paragraphs; links allowed.</p>', 'recplanet' );
 		add_settings_field( 'rp_home_text', 'Text', fn() => print '<textarea name="rp_home_text" rows="14" class="large-text">' . esc_textarea( get_option( 'rp_home_text', '' ) ) . '</textarea>', 'recplanet', 'rp_home' );
