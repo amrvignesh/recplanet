@@ -121,6 +121,7 @@ class Import_Command {
 		$nodes = $wpdb->get_results( $sql );
 		$total = count( $nodes );
 		WP_CLI::log( "$total park nodes to process." );
+		$n_done   = 0;
 		$progress = \WP_CLI\Utils\make_progress_bar( 'Parks', $total );
 		Counter::suspend( true );
 
@@ -212,6 +213,9 @@ class Import_Command {
 				}
 			}
 			Index::upsert( $id );
+			if ( 0 === ++$n_done % 250 ) {
+				Index::free_memory();
+			}
 		}
 		$progress->finish();
 		Counter::suspend( false );

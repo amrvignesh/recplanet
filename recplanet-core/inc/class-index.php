@@ -103,18 +103,42 @@ class Index {
 	}
 
 	/** Rebuild every row from scratch. Used by the nightly job and the importer. */
+	/** Drops what a long loop has accumulated in the runtime object cache and the query log. */
+	public static function free_memory(): void {
+		global $wpdb, $wp_object_cache;
+		$wpdb->queries = [];
+		if ( function_exists( 'wp_cache_flush_runtime' ) ) {
+			wp_cache_flush_runtime();
+		}
+		if ( is_object( $wp_object_cache ) ) {
+			foreach ( [ 'cache', 'group_ops', 'stats', 'memcache_debug' ] as $prop ) {
+				if ( property_exists( $wp_object_cache, $prop ) && is_array( $wp_object_cache->$prop ) ) {
+					$wp_object_cache->$prop = [];
+				}
+			}
+		}
+		if ( function_exists( 'gc_collect_cycles' ) ) {
+			gc_collect_cycles();
+		}
+	}
+
 	public static function rebuild_all( ?callable $progress = null ): int {
 		global $wpdb;
 		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish'", POST_PARK ) );
 		$wpdb->query( "TRUNCATE TABLE " . table( 'park_index' ) );
 		Counter::suspend( true );
+		wp_suspend_cache_addition( true );          // 67,000 parks would otherwise fill the object cache and exhaust memory
 		$n = 0;
 		foreach ( $ids as $id ) {
 			self::upsert( (int) $id );
-			if ( $progress && ( ++$n % 500 === 0 ) ) {
-				$progress( $n, count( $ids ) );
+			if ( ++$n % 500 === 0 ) {
+				self::free_memory();
+				if ( $progress ) {
+					$progress( $n, count( $ids ) );
+				}
 			}
 		}
+		wp_suspend_cache_addition( false );
 		Counter::suspend( false );
 		Counter::rebuild_rollups();
 		return count( $ids );
