@@ -1,30 +1,25 @@
 -- RecPlanet Drupal 6: understanding the data through phpMyAdmin
 --
--- Query 1 (overview) and query 3 (all parks) have been run. The park-side answers came out
--- of query 3 offline. QUERY 4 below collects everything that is left, as ONE query in the
--- same nine-column shape. Every branch reads a small table by index or with a LIMIT; the
--- pattern that hung the server last time (a NOT IN over an unindexed text column) is not
--- used anywhere here.
---
--- Paste QUERY 4 whole into phpMyAdmin > SQL > Go, Export the result as CSV ("Dump all rows"),
--- save as migration/samples/04-rest.csv.
---
--- Sections and what a..h mean:
---   activity_allowed  slice_no, text                (the stored allowed-values list, in 1500-char slices)
---   contest_row       nid, title, author, created, filepath, star_rating, winning_voter, comment   (all 254)
---   contest_coding    nid, first 300 chars of "contest coding"                                     (all with text)
---   vote_total        nid, votes, avg_percent, voters, first_vote, last_vote                        (per photo)
---   vote_sample       vote_id, nid, uid, value, value_type, tag, source, voted                      (20 newest)
---   contest_tag       tid, tag, photos                                                              (all 421)
---   upload_pic        nid, uploader, created, park_nid, park_title, filepath                        (all 59)
---   alias_broken      pid, src, dst, title                                                          (the 75 with "[")
---   alias_category    src, dst, term                                                                (30 samples)
---   nodewords         type, name, rows
---   blog_row          nid, title, author, created, url, tags, image, body_len                       (all 80)
---   forum_row         nid, title, author, created, first 1500 chars                                 (all 11)
---   page_row          nid, title, url, body 1-1500, body 1501-3000, body 3001-4500, body_len        (all 11)
+-- Query 1 (overview) and query 3 (all parks, wide) have been run.
+-- What is left is split into THREE short queries, A, B and C. Run each on its own in
+-- phpMyAdmin > SQL > Go, then Export the result as CSV ("Dump all rows") and save it under
+-- migration/samples/ with the name shown. Each returns the same nine text columns
+-- (section, a..h) as query 1. Every join here runs on an index; nothing scans a big table
+-- against another big table, which is what hung the server before.
 --
 -- Everything only reads.
+
+
+-- =====================================================================================
+-- QUERY A: the contest.                                        -> 4a-contest.csv
+--   activity_allowed  slice_no, text          (the stored allowed-values list, 1500-char slices)
+--   contest_row       nid, title, author, created, filepath, star_rating, winning_voter, comment
+--   contest_coding    nid, first 300 chars of "contest coding"
+--   vote_total        nid, votes, avg_percent, voters, first_vote, last_vote
+--   vote_sample       vote_id, nid, uid, value, value_type, tag, source, voted   (20 newest)
+--   contest_tag       tid, tag, photos
+--   upload_pic        nid, uploader, created, park_nid, park_title, filepath
+-- =====================================================================================
 
 SELECT * FROM (
 
@@ -39,9 +34,6 @@ SELECT * FROM (
    FROM content_node_field WHERE field_name = 'field_pactivities')
   UNION ALL
   (SELECT 'activity_allowed', '4', CAST(SUBSTRING(global_settings, 4501, 1500) AS CHAR), '', '', '', '', '', ''
-   FROM content_node_field WHERE field_name = 'field_pactivities')
-  UNION ALL
-  (SELECT 'activity_allowed', '5', CAST(SUBSTRING(global_settings, 6001, 1500) AS CHAR), '', '', '', '', '', ''
    FROM content_node_field WHERE field_name = 'field_pactivities')
 
   UNION ALL
@@ -111,40 +103,59 @@ SELECT * FROM (
    WHERE n.type = 'upload_park_picture'
    ORDER BY n.nid DESC)
 
-  UNION ALL
+) AS contest;
 
-  (SELECT 'alias_broken', CAST(a.pid AS CHAR), CAST(a.src AS CHAR), CAST(a.dst AS CHAR), CAST(IFNULL(n.title, '') AS CHAR),
-          '', '', '', ''
+
+-- =====================================================================================
+-- QUERY B: the old URLs.                                        -> 4b-aliases.csv
+--   alias_broken     pid, src, dst, title            (the 75 aliases containing "[")
+--   alias_category   src, dst, term                  (30 samples of the 50,309 term aliases)
+--   nodewords        type, name, rows                (hand-written meta tags, counted)
+-- The joins start from the small side and look up url_alias by its indexed src column.
+-- =====================================================================================
+
+SELECT * FROM (
+
+  (SELECT 'alias_broken' AS section, CAST(a.pid AS CHAR) AS a, CAST(a.src AS CHAR) AS b, CAST(a.dst AS CHAR) AS c,
+          CAST(IFNULL(n.title, '') AS CHAR) AS d, '' AS e, '' AS f, '' AS g, '' AS h
    FROM url_alias a
-   LEFT JOIN node n ON a.src = CONCAT('node/', n.nid)
+   LEFT JOIN node n ON n.nid = CAST(SUBSTRING(a.src, 6) AS UNSIGNED) AND a.src LIKE 'node/%'
    WHERE a.dst LIKE '%[%')
 
   UNION ALL
 
-  (SELECT 'alias_category', CAST(a.src AS CHAR), CAST(a.dst AS CHAR), CAST(IFNULL(t.name, '') AS CHAR), '', '', '', '', ''
-   FROM url_alias a
-   LEFT JOIN term_data t ON a.src = CONCAT('taxonomy/term/', t.tid)
-   WHERE a.dst LIKE 'category/%'
-   ORDER BY a.pid DESC LIMIT 30)
+  (SELECT 'alias_category', CAST(a.src AS CHAR), CAST(a.dst AS CHAR), CAST(t.name AS CHAR), '', '', '', '', ''
+   FROM (SELECT tid, name FROM term_data WHERE vid = 5 ORDER BY tid DESC LIMIT 30) t
+   JOIN url_alias a ON a.src = CONCAT('taxonomy/term/', t.tid))
 
   UNION ALL
 
   (SELECT 'nodewords', CAST(nw.type AS CHAR), CAST(nw.name AS CHAR), CAST(nw.rows_ AS CHAR), '', '', '', '', ''
    FROM (SELECT type, name, COUNT(*) AS rows_ FROM nodewords GROUP BY type, name) nw)
 
-  UNION ALL
+) AS aliases;
 
-  (SELECT 'blog_row', CAST(n.nid AS CHAR), CAST(n.title AS CHAR), CAST(IFNULL(u.name, '') AS CHAR),
-          CAST(FROM_UNIXTIME(n.created) AS CHAR), CAST(IFNULL(a.dst, '') AS CHAR),
+
+-- =====================================================================================
+-- QUERY C: blog, forum and pages.                               -> 4c-text.csv
+--   blog_row    nid, title, author, created, url, tags, image, body_len     (all 80)
+--   forum_row   nid, title, author, created, first 1500 chars               (all 11)
+--   page_row    nid, title, url, body 1-1500, body 1501-3000, body 3001-4500, body_len   (all 11)
+-- =====================================================================================
+
+SELECT * FROM (
+
+  (SELECT 'blog_row' AS section, CAST(n.nid AS CHAR) AS a, CAST(n.title AS CHAR) AS b, CAST(IFNULL(u.name, '') AS CHAR) AS c,
+          CAST(FROM_UNIXTIME(n.created) AS CHAR) AS d, CAST(IFNULL(al.dst, '') AS CHAR) AS e,
           CAST(IFNULL((SELECT GROUP_CONCAT(t.name SEPARATOR ' | ')
                        FROM term_node tn JOIN term_data t ON t.tid = tn.tid
-                       WHERE tn.vid = n.vid), '') AS CHAR),
-          CAST(IFNULL(f.filepath, '') AS CHAR),
-          CAST(LENGTH(r.body) AS CHAR)
+                       WHERE tn.vid = n.vid), '') AS CHAR) AS f,
+          CAST(IFNULL(f.filepath, '') AS CHAR) AS g,
+          CAST(LENGTH(r.body) AS CHAR) AS h
    FROM node n
    JOIN node_revisions r ON r.vid = n.vid
    LEFT JOIN users u ON u.uid = n.uid
-   LEFT JOIN url_alias a ON a.src = CONCAT('node/', n.nid)
+   LEFT JOIN url_alias al ON al.src = CONCAT('node/', n.nid)
    LEFT JOIN content_field_blog_image bi ON bi.vid = n.vid AND bi.delta = 0
    LEFT JOIN files f ON f.fid = bi.field_blog_image_fid
    WHERE n.type = 'blogs'
@@ -163,15 +174,15 @@ SELECT * FROM (
 
   UNION ALL
 
-  (SELECT 'page_row', CAST(n.nid AS CHAR), CAST(n.title AS CHAR), CAST(IFNULL(a.dst, '') AS CHAR),
+  (SELECT 'page_row', CAST(n.nid AS CHAR), CAST(n.title AS CHAR), CAST(IFNULL(al.dst, '') AS CHAR),
           CAST(REPLACE(REPLACE(SUBSTRING(r.body, 1, 1500), '\r', ''), '\n', ' ') AS CHAR),
           CAST(REPLACE(REPLACE(SUBSTRING(r.body, 1501, 1500), '\r', ''), '\n', ' ') AS CHAR),
           CAST(REPLACE(REPLACE(SUBSTRING(r.body, 3001, 1500), '\r', ''), '\n', ' ') AS CHAR),
           CAST(LENGTH(r.body) AS CHAR), ''
    FROM node n
    JOIN node_revisions r ON r.vid = n.vid
-   LEFT JOIN url_alias a ON a.src = CONCAT('node/', n.nid)
+   LEFT JOIN url_alias al ON al.src = CONCAT('node/', n.nid)
    WHERE n.type = 'page'
    ORDER BY n.nid DESC)
 
-) AS rest;
+) AS textual;
