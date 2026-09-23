@@ -58,7 +58,7 @@ $states = $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n FROM $id
       </div>
       <div class="plist"><div class="phd"><span>Place</span><span>Activities</span><span style="text-align:right">Acres</span></div><?php foreach ( $rows as $r ) { echo rp_park_row( $r ); } ?></div>
       <?php $pages = (int) ceil( $stats['count'] / $per ); if ( $pages > 1 ) : ?>
-      <nav class="pager" aria-label="Pages"><?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( add_query_arg( [ 'sort' => $sort, 'paged' => $paged - 1 ], get_term_link( $t ) ) ); ?>">← Previous</a><?php endif; ?><span>Page <?php echo (int) $paged; ?> of <?php echo (int) $pages; ?></span><?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( add_query_arg( [ 'sort' => $sort, 'paged' => $paged + 1 ], get_term_link( $t ) ) ); ?>">Next →</a><?php endif; ?></nav>
+      <nav class="pager" aria-label="Pages"><?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged - 1, $sort ) ); ?>">← Previous</a><?php endif; ?><span>Page <?php echo (int) $paged; ?> of <?php echo (int) $pages; ?></span><?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged + 1, $sort ) ); ?>">Next →</a><?php endif; ?></nav>
       <?php endif; ?>
     </div>
     <div class="side">

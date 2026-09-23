@@ -26,6 +26,11 @@ class Rewrites {
 
 	public static function rules(): void {
 		$st = '([a-z]{2})';
+		// Pagination first, so "page" is never read as a city.
+		add_rewrite_rule( "^world/([a-z]{2})/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country&paged=$matches[2]', 'top' );
+		add_rewrite_rule( "^$st/county/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county&paged=$matches[3]', 'top' );
+		add_rewrite_rule( "^$st/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city&paged=$matches[3]', 'top' );
+		add_rewrite_rule( "^$st/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_place_level=state&paged=$matches[2]', 'top' );
 		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/?$", 'index.php?post_type=' . POST_PARK . '&rp_country=$matches[1]&name=$matches[2]', 'top' );
 		add_rewrite_rule( "^world/([a-z]{2})/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country', 'top' );
 		add_rewrite_rule( "^$st/county/([^/]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county', 'top' );
@@ -43,12 +48,12 @@ class Rewrites {
 		$state   = strtolower( (string) get_post_meta( $post->ID, 'rp_state', true ) );
 		$city    = legacy_slug( (string) get_post_meta( $post->ID, 'rp_city', true ) );
 		if ( 'us' === $country && $state && $city ) {
-			return home_url( "/$state/$city/{$post->post_name}" );
+			return user_trailingslashit( home_url( "/$state/$city/{$post->post_name}" ) );
 		}
 		if ( 'us' === $country && $state ) {
-			return home_url( "/$state/{$post->post_name}" );        // no city on record; handled by the city rule with an empty-city fallback
+			return user_trailingslashit( home_url( "/$state/{$post->post_name}" ) );        // no city on record; handled by the city rule with an empty-city fallback
 		}
-		return home_url( "/world/$country/{$post->post_name}" );
+		return user_trailingslashit( home_url( "/world/$country/{$post->post_name}" ) );
 	}
 
 	/** Place terms get the same short URLs. */
@@ -66,13 +71,13 @@ class Rewrites {
 		$country = $chain[0]->slug;
 		$level   = get_term_meta( $term->term_id, 'rp_level', true );
 		if ( 'us' !== $country ) {
-			return home_url( '/world/' . $country . ( isset( $chain[1] ) ? '/' . $chain[1]->slug : '' ) );
+			return user_trailingslashit( home_url( '/world/' . $country . ( isset( $chain[1] ) ? '/' . $chain[1]->slug : '' ) ) );
 		}
 		switch ( $level ) {
 			case 'country': return home_url( '/' );
-			case 'state':   return home_url( '/' . $chain[1]->slug );
-			case 'county':  return home_url( '/' . $chain[1]->slug . '/county/' . $term->slug );
-			case 'city':    return home_url( '/' . $chain[1]->slug . '/' . $term->slug );
+			case 'state':   return user_trailingslashit( home_url( '/' . $chain[1]->slug ) );
+			case 'county':  return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/county/' . $term->slug ) );
+			case 'city':    return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/' . $term->slug ) );
 		}
 		return $link;
 	}

@@ -63,9 +63,9 @@ $lead    = sprintf( '%s public places on file across %s acres%s. %s',
       </div>
       <?php $pages = (int) ceil( $stats['count'] / $per ); if ( $pages > 1 ) : ?>
       <nav class="pager" aria-label="Pages">
-        <?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( add_query_arg( [ 'sort' => $sort, 'paged' => $paged - 1 ], get_term_link( $t ) ) ); ?>">← Previous</a><?php endif; ?>
+        <?php if ( $paged > 1 ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged - 1, $sort ) ); ?>">← Previous</a><?php endif; ?>
         <span>Page <?php echo (int) $paged; ?> of <?php echo (int) $pages; ?></span>
-        <?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( add_query_arg( [ 'sort' => $sort, 'paged' => $paged + 1 ], get_term_link( $t ) ) ); ?>">Next →</a><?php endif; ?>
+        <?php if ( $paged < $pages ) : ?><a href="<?php echo esc_url( rp_page_link( get_term_link( $t ), $paged + 1, $sort ) ); ?>">Next →</a><?php endif; ?>
       </nav>
       <?php endif; ?>
     </div>

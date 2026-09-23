@@ -12,6 +12,7 @@ define( 'RP_THEME_URI', get_template_directory_uri() );
 require_once RP_THEME_DIR . '/inc/template-tags.php';
 require_once RP_THEME_DIR . '/inc/queries.php';
 require_once RP_THEME_DIR . '/inc/upload.php';
+require_once RP_THEME_DIR . '/inc/seo.php';
 
 add_action( 'after_setup_theme', function () {
 	add_theme_support( 'title-tag' );
@@ -48,22 +49,6 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_dequeue_style( 'global-styles' );
 	}
 } );
-
-/** Meta description: the hand-written one from Drupal, else generated from the record. */
-add_action( 'wp_head', function () {
-	$desc = '';
-	if ( is_singular( 'rp_park' ) ) {
-		$desc = get_post_meta( get_the_ID(), 'rp_meta_description', true ) ?: rp_park_lead( get_the_ID() );
-	} elseif ( is_tax( 'rp_place' ) ) {
-		$t = get_queried_object();
-		$s = rp_place_stats( $t );
-		$desc = sprintf( '%s public places across %s acres in %s, every one checked by a person.', number_format( $s['count'] ), RP\format_acres( $s['acres'], 0 ), $t->name );
-	}
-	if ( $desc ) {
-		echo '<meta name="description" content="' . esc_attr( wp_strip_all_tags( $desc ) ) . '">' . "\n";
-	}
-	echo '<meta name="theme-color" content="#0FB8E6">' . "\n";
-}, 5 );
 
 /** Structured data for parks. */
 add_action( 'wp_head', function () {

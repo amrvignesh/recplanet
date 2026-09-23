@@ -32,7 +32,7 @@ $dec   = (int) round( ( $head['acres'] - $whole ) * 100 );
 
   <div class="wrap hero-inner">
     <div class="brand"><?php echo rp_logo(); ?></div>
-    <div class="tag script"><?php echo esc_html( get_bloginfo( 'description' ) ?: 'Where the world is your playground.' ); ?></div>
+    <h1 class="tag script"><?php echo esc_html( get_bloginfo( 'description' ) ?: 'Where the world is your playground.' ); ?></h1>
     <div class="counter num" aria-live="polite"><span class="big" id="acresInt"><?php echo esc_html( number_format( $whole ) ); ?></span><span class="dec" id="acresDec">.<?php echo esc_html( str_pad( (string) $dec, 2, '0', STR_PAD_LEFT ) ); ?></span></div>
     <p class="counter-label">acres of recreation and conservation land, held in common, counted one park at a time. The only big number in the news that goes up.</p>
     <div class="counter-sub">
