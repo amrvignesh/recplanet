@@ -3,3 +3,6 @@ migration/samples/
 *.tar.gz
 migration/query_exports/
 migration/*.zip
+migration/admin_test.sql
+migration/*.sql.gz
+migration/d6.sql
