@@ -193,6 +193,42 @@
     });
   }
 
+  /* ---- World Parks: the state choropleth and the world dots ---- */
+  var usBox = $('#usmapBox');
+  if (usBox) {
+    var data = {}; try { data = JSON.parse(usBox.getAttribute('data-states') || '{}'); } catch (e) {}
+    var max = parseInt(usBox.getAttribute('data-max') || '1', 10), tip = $('#usTip'), svgm = $('.usmap', usBox);
+    var lmax = Math.log(max + 1), i = 0;
+    $$('.st', usBox).forEach(function (p) {
+      var code = p.getAttribute('data-st'), d = data[code];
+      p.style.setProperty('--d', i++);
+      if (!d || !d.count) return;
+      var lvl = Math.max(1, Math.min(5, Math.ceil(Math.log(d.count + 1) / lmax * 5)));
+      p.classList.add('l' + lvl);
+      p.setAttribute('tabindex', '0'); p.setAttribute('role', 'link'); p.setAttribute('aria-label', d.name + ', ' + d.count + ' places');
+      function show(e) {
+        tip.innerHTML = '<b>' + d.name + '</b><span>' + d.count.toLocaleString('en-US') + ' places · ' + Math.round(d.acres).toLocaleString('en-US') + ' acres</span>';
+        tip.hidden = false;
+        var r = usBox.getBoundingClientRect(); tip.style.left = Math.min(r.width - 230, (e.clientX - r.left) + 14) + 'px'; tip.style.top = ((e.clientY - r.top) - 10) + 'px';
+      }
+      p.addEventListener('mousemove', show); p.addEventListener('mouseleave', function () { tip.hidden = true; });
+      p.addEventListener('click', function () { window.location.href = d.url; });
+      p.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.location.href = d.url; } });
+    });
+    if (!reduce) requestAnimationFrame(function () { svgm.classList.add('lit'); });
+  }
+  var wm = $('#worldMap');
+  if (wm) {
+    var wtip = $('#worldTip');
+    $$('.wdot', wm).forEach(function (a) {
+      a.addEventListener('mousemove', function (e) {
+        wtip.innerHTML = '<b>' + a.getAttribute('data-name') + '</b><span>' + Number(a.getAttribute('data-n')).toLocaleString('en-US') + ' places · ' + a.getAttribute('data-a') + ' acres</span>';
+        wtip.hidden = false; var r = wm.getBoundingClientRect(); wtip.style.left = Math.min(r.width - 230, (e.clientX - r.left) + 14) + 'px'; wtip.style.top = ((e.clientY - r.top) - 10) + 'px';
+      });
+      a.addEventListener('mouseleave', function () { wtip.hidden = true; });
+    });
+  }
+
   /* ---- the voter prize notice ---- */
   var congrats = $('#congrats');
   if (congrats) {

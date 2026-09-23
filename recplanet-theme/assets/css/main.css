@@ -425,3 +425,29 @@ body.trip-hiker .trip .sign line{stroke:#8A6A3F}
 .grid3 a.box{text-decoration:none;color:var(--ink);gap:4px}
 .grid3 a.box b{font-family:'Bricolage Grotesque',sans-serif;font-size:18px}
 .grid3 a.box span{font-size:13px;color:var(--muted)}
+
+/* ---- World Parks: the state choropleth and the world dot map ---- */
+.usmap-wrap{padding-block:clamp(40px,5vw,70px)}
+.usmap-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:28px;align-items:start}
+@media (max-width:960px){.usmap-grid{grid-template-columns:1fr}}
+.usmap-box{position:relative;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow)}
+.usmap{width:100%;height:auto;display:block}
+.usmap .st{fill:#E6EFDC;stroke:#fff;stroke-width:.8;cursor:pointer;transition:fill .5s,transform .15s;transform-box:fill-box;transform-origin:center}
+.usmap .st.l1{fill:#DCEBBF}.usmap .st.l2{fill:#BEDB8A}.usmap .st.l3{fill:#9DCB57}.usmap .st.l4{fill:#7FB33A}.usmap .st.l5{fill:#5B9A2E}
+.usmap .st:hover,.usmap .st.hot{fill:var(--orange);transform:scale(1.03)}
+.usmap .borders path{stroke:#fff;stroke-width:1}
+.usmap.lit .st{animation:light .6s ease both;animation-delay:calc(var(--d,0) * 12ms)}
+@keyframes light{from{fill:#E6EFDC}}
+.maptip{position:absolute;pointer-events:none;background:#14211A;color:#fff;border-radius:10px;padding:9px 12px;font-size:13px;box-shadow:0 10px 24px -10px rgba(0,0,0,.6);z-index:5;max-width:220px}
+.maptip b{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;display:block}
+.maptip span{color:#C6D2C0}
+.maplegend{display:flex;align-items:center;gap:4px;margin-top:10px;font-size:11px;color:var(--muted)}
+.maplegend i{width:22px;height:10px;border-radius:2px;display:inline-block}
+.maplegend .l1{background:#DCEBBF}.maplegend .l2{background:#BEDB8A}.maplegend .l3{background:#9DCB57}.maplegend .l4{background:#7FB33A}.maplegend .l5{background:#5B9A2E}
+.maplegend span{margin:0 4px}
+.worldmap-wrap{background:var(--bg-2);padding-block:clamp(40px,5vw,70px)}
+.worldmap{position:relative}
+.worldmap svg{width:100%;height:auto;display:block;border-radius:18px;box-shadow:var(--shadow)}
+.worldmap .wdot circle{transition:r .2s}
+.worldmap .wdot:hover circle:last-of-type{stroke:#FFE66D;stroke-width:3}
+.worldmap .wdot:focus-visible circle{stroke:var(--orange);stroke-width:3}
