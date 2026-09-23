@@ -117,6 +117,9 @@ add_filter( 'excerpt_more', fn() => '…' );
 
 /** Photo uploads from members go to pending. Contest and park pins come from the form. */
 add_filter( 'wp_insert_post_data', function ( array $data ) {
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		return $data; // the importer and editorial commands publish directly
+	}
 	if ( 'rp_photo' === $data['post_type'] && 'publish' === $data['post_status'] && ! current_user_can( 'edit_others_rp_photos' ) && get_option( 'rp_photo_needs_approval', true ) ) {
 		$data['post_status'] = 'pending';
 	}
