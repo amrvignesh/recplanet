@@ -551,7 +551,7 @@ class Import_Command {
 			return '';
 		}
 		$t = Rewrites::find_place( 'city', 'us', $code, '', $slug );
-		return $t ? $t->slug : '';
+		return $t ? Rewrites::url_slug( $t ) : '';
 	}
 
 	/** "alafia river boat ramps" -> boat-ramps: the longest tail that is a facility or activity the site knows. */
