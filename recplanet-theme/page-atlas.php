@@ -39,7 +39,6 @@ $activity = sanitize_text_field( $_GET['activity'] ?? '' );
     <div class="modes" id="modes"><button type="button" data-m="dots" class="on">Places</button><button type="button" data-m="acres">Acres</button><button type="button" data-m="steward">Managed by</button></div>
     <div class="tools"><button type="button" id="locateMe">◎ Locate me</button><button type="button" id="placeMe">✥ Put me here</button><button type="button" id="selArea">▭ Select an area</button><button type="button" id="shareView">⇪ Copy link to this view</button></div>
     <div class="legend" id="legend"></div>
-    <div class="timebar"><button type="button" id="play">▶ Watch it grow</button><small>2010</small><input type="range" id="year" min="2010" max="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" value="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" aria-label="Show places added up to this year"><small><?php echo esc_html( gmdate( 'Y' ) ); ?></small><b id="yearLbl"><?php echo esc_html( gmdate( 'Y' ) ); ?></b></div>
   </div>
   <div class="rp" id="rp">
     <div class="hd"><span class="eyebrow" id="rpTitle">In view</span><div class="big"><div><b id="vN">0</b><small>places</small></div><div><b id="vA" style="color:var(--orange)">0</b><small>acres</small></div></div><small class="note" id="rpNote">Pan and zoom to change what is counted. Click a cluster to open it.</small></div>

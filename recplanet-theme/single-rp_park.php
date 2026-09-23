@@ -13,7 +13,6 @@ $country = get_post_meta( $id, 'rp_country', true ) ?: 'us';
 $street  = get_post_meta( $id, 'rp_street', true );
 $postal  = get_post_meta( $id, 'rp_postal', true );
 $web     = get_post_meta( $id, 'rp_website', true );
-$verified = get_post_meta( $id, 'rp_verified_on', true );
 $acts    = wp_get_object_terms( $id, 'rp_activity', [ 'fields' => 'names' ] );
 $stew    = wp_get_object_terms( $id, 'rp_steward' );
 $stew_name = ''; $stew_level = ''; $stew_link = '';
@@ -47,7 +46,6 @@ $city_term  = $place && 'city' === get_term_meta( $place->term_id, 'rp_level', t
         <span class="q">Been here lately? Is this still accurate?</span>
         <button type="button" class="yes" data-answer="yes">Yes, still right</button>
         <button type="button" data-answer="no">Something changed</button>
-        <span class="note">Last checked <?php echo esc_html( $verified ? wp_date( 'j F Y', strtotime( $verified ) ) : 'unknown' ); ?>. On file since <?php echo esc_html( get_the_date( 'j F Y' ) ); ?>.</span>
         <form class="fresh-form" hidden><label>What changed?<textarea name="note" rows="2" maxlength="2000"></textarea></label><button type="submit" class="btn btn-orange">Send</button></form>
       </div>
     </div>
@@ -103,12 +101,6 @@ $city_term  = $place && 'city' === get_term_meta( $place->term_id, 'rp_level', t
         <?php foreach ( $near as $r ) : ?><a class="row" href="<?php echo esc_url( get_permalink( (int) $r->post_id ) ); ?>"><span><?php echo esc_html( $r->title ); ?></span><b class="num"><?php echo null === $r->acres ? '' : esc_html( RP\format_acres( (float) $r->acres ) ); ?></b></a><?php endforeach; ?>
       </div>
       <?php endif; ?>
-      <div class="box dark"><h4>Record</h4>
-        <div class="kv"><span>Added</span><b><?php echo esc_html( get_the_date( 'j M Y' ) ); ?></b></div>
-        <div class="kv"><span>Last checked</span><b><?php echo esc_html( $verified ? wp_date( 'j M Y', strtotime( $verified ) ) : '—' ); ?></b></div>
-        <div class="kv"><span>Address</span><b class="mono"><?php echo esc_html( wp_parse_url( get_permalink(), PHP_URL_PATH ) ); ?></b></div>
-        <a href="#" class="more fresh-open">Suggest a correction →</a>
-      </div>
     </div>
   </section>
 </div>

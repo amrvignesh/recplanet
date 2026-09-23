@@ -5,7 +5,7 @@
   if (!root || typeof maplibregl === 'undefined') return;
   var ACTS = RPc.acts || [], STW = { city: '#88B500', county: '#0FB8E6', state: '#FFE66D', federal: '#E85305', tribal: '#C77DFF', other: '#9FB095' };
   var start = {}; try { start = JSON.parse(root.getAttribute('data-start') || '{}'); } catch (e) {}
-  var state = { mode: 'dots', lens: root.getAttribute('data-activity') || '', stw: {}, minAc: 0, noPhoto: false, year: parseInt(document.getElementById('year').value, 10), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
+  var state = { mode: 'dots', lens: root.getAttribute('data-activity') || '', stw: {}, minAc: 0, noPhoto: false, year: new Date().getFullYear(), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
   Object.keys(STW).forEach(function (k) { state.stw[k] = true; });
   try { var saved = JSON.parse(localStorage.getItem('rp-me') || 'null'); if (saved) state.me = saved; } catch (e) {}
 
@@ -157,11 +157,4 @@
   document.getElementById('locateMe').addEventListener('click', function () { var b = this; if (!navigator.geolocation) return; b.textContent = 'Locating…'; navigator.geolocation.getCurrentPosition(function (pos) { state.me = { lat: pos.coords.latitude, lng: pos.coords.longitude }; try { localStorage.setItem('rp-me', JSON.stringify(state.me)); } catch (x) {} b.textContent = '◎ Located'; map.easeTo({ center: [state.me.lng, state.me.lat], zoom: 13 }); drawMe(); panel(); }, function () { b.textContent = 'Location unavailable'; }); });
   document.getElementById('selArea').addEventListener('click', function () { state.selecting = !state.selecting; this.classList.toggle('on', state.selecting); if (!state.selecting) { state.sel = null; drawSel(); panel(); } });
   document.getElementById('shareView').addEventListener('click', function () { var c = map.getCenter(), u = RPc.home + 'atlas/?lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5) + '&zoom=' + map.getZoom().toFixed(1) + (state.lens ? '&activity=' + encodeURIComponent(state.lens) : ''); var b = this; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { b.textContent = '✓ Link copied'; }, function () { window.prompt('Copy this link', u); }); });
-  var yr = document.getElementById('year'), yl = document.getElementById('yearLbl'), playing = null;
-  yr.addEventListener('input', function () { state.year = parseInt(yr.value, 10); yl.textContent = state.year; load(); });
-  document.getElementById('play').addEventListener('click', function () {
-    var b = this; if (playing) { clearInterval(playing); playing = null; b.textContent = '▶ Watch it grow'; return; }
-    state.year = 2009; b.textContent = '❚❚ Pause';
-    playing = setInterval(function () { state.year++; var max = parseInt(yr.max, 10); if (state.year > max) { clearInterval(playing); playing = null; b.textContent = '▶ Watch it grow'; state.year = max; } yr.value = state.year; yl.textContent = state.year; load(); }, 700);
-  });
 })();
