@@ -8,12 +8,12 @@
     <div class="cols">
       <div><h4>Explore</h4>
         <?php if ( has_nav_menu( 'footer-explore' ) ) { wp_nav_menu( [ 'theme_location' => 'footer-explore', 'container' => false, 'items_wrap' => '%3$s', 'depth' => 1 ] ); } else { ?>
-        <a href="<?php echo esc_url( home_url( '/atlas' ) ); ?>">Near me</a><a href="<?php echo esc_url( home_url( '/#ledger' ) ); ?>">Newest places</a><a href="<?php echo esc_url( home_url( '/states' ) ); ?>">States and provinces</a><a href="<?php echo esc_url( home_url( '/activities' ) ); ?>">Activities</a><a href="<?php echo esc_url( home_url( '/blog' ) ); ?>">Blog</a>
+        <a href="<?php echo esc_url( home_url( '/atlas' ) ); ?>">Near me</a><a href="<?php echo esc_url( home_url( '/#ledger' ) ); ?>">Newest places</a><a href="<?php echo esc_url( home_url( '/states' ) ); ?>">States and provinces</a><a href="<?php echo esc_url( home_url( '/world' ) ); ?>">World Parks</a><a href="<?php echo esc_url( home_url( '/activities' ) ); ?>">Activities</a><a href="<?php echo esc_url( home_url( '/blog' ) ); ?>">Blog</a>
         <?php } ?>
       </div>
       <div><h4>Take part</h4>
         <?php if ( has_nav_menu( 'footer-take-part' ) ) { wp_nav_menu( [ 'theme_location' => 'footer-take-part', 'container' => false, 'items_wrap' => '%3$s', 'depth' => 1 ] ); } else { ?>
-        <a href="<?php echo esc_url( home_url( '/contest' ) ); ?>">Photo contest</a><a href="<?php echo esc_url( wp_registration_url() ); ?>">Join free</a><a href="<?php echo esc_url( home_url( '/contest/rules' ) ); ?>">Contest rules</a>
+        <a href="<?php echo esc_url( home_url( '/contest' ) ); ?>">Photo contest</a><a href="<?php echo esc_url( wp_registration_url() ); ?>">Join free</a><a href="<?php echo esc_url( home_url( '/rules' ) ); ?>">Contest rules</a>
         <?php } ?>
       </div>
       <div><h4>About</h4>

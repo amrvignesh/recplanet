@@ -24,7 +24,7 @@ $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
         <?php if ( get_post_meta( $open->ID, 'rp_prizes', true ) ) : ?><div><small>Prizes</small><b><?php echo esc_html( get_post_meta( $open->ID, 'rp_prizes', true ) ); ?></b></div><?php endif; ?>
       </div>
       <?php endif; ?>
-      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><a class="btn btn-white" href="<?php echo esc_url( home_url( '/contest/rules' ) ); ?>">Contest rules</a></div>
+      <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><a class="btn btn-white" href="<?php echo esc_url( home_url( '/rules' ) ); ?>">Contest rules</a></div>
     </div>
     <?php get_template_part( 'template-parts/upload-form', null, [ 'contest' => $open, 'park' => $park_pre ] ); ?>
   </div>

@@ -192,6 +192,11 @@ class Rewrites {
 			return;
 		}
 		$path = rawurldecode( $path );
+		$to   = self::old_site_url( $path, $_GET );
+		if ( $to ) {
+			wp_redirect( home_url( $to ), 301 );
+			exit;
+		}
 		$row  = $wpdb->get_row( $wpdb->prepare( "SELECT new_path FROM " . table( 'redirects' ) . " WHERE old_path = %s", $path ) );
 		if ( ! $row ) {
 			// The old site served park aliases with and without the state segment; try the last segment as a park slug.
@@ -206,6 +211,38 @@ class Rewrites {
 		$wpdb->query( $wpdb->prepare( "UPDATE " . table( 'redirects' ) . " SET hits = hits + 1 WHERE old_path = %s", $path ) );
 		wp_redirect( home_url( '/' . ltrim( $row->new_path, '/' ) ), 301 );
 		exit;
+	}
+
+	/** The old finder and the old top-level pages: /park?province=GA&city=Decatur, /city?province=TX, /world-parks ... */
+	public static function old_site_url( string $path, array $get ): string {
+		$prov = strtolower( sanitize_text_field( $get['province'] ?? '' ) );
+		$city = sanitize_text_field( $get['city'] ?? '' );
+		switch ( $path ) {
+			case 'park':
+			case 'parks':
+			case 'city':
+				if ( preg_match( '/^[a-z]{2}$/', $prov ) ) {
+					return '/' . $prov . ( $city ? '/' . legacy_slug( $city ) : '' ) . '/';
+				}
+				return '/states/';
+			case 'multi-select':
+				$acts = (array) ( $get['actitivity'] ?? $get['activity'] ?? [] );
+				$a    = sanitize_text_field( reset( $acts ) ?: '' );
+				return '/atlas/' . ( $a ? '?activity=' . rawurlencode( $a ) : '' );
+			case 'united-states': return '/states/';
+			case 'world-parks':   return '/world/';
+			case 'photocontest':  return '/contest/';
+			case 'acreage':       return '/';
+			case 'blogtags':
+			case 'blog':          return '/blog/';
+			case 'forum':         return '/';
+			case 'about-us':      return '/about-us/';
+			case 'new-user-register':
+			case 'user/register': return wp_parse_url( wp_registration_url(), PHP_URL_PATH ) . '?' . wp_parse_url( wp_registration_url(), PHP_URL_QUERY );
+			case 'user':
+			case 'user/login':    return wp_parse_url( wp_login_url(), PHP_URL_PATH );
+		}
+		return '';
 	}
 
 	/** Used by the importer. */

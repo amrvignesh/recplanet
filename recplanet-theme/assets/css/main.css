@@ -388,3 +388,40 @@ footer .copy{margin-top:26px;font-size:12px;color:#8FA095}
 .notice-ok{background:var(--lime);color:#fff;padding:12px 14px;border-radius:10px;font-weight:700}
 .notice-bad{background:var(--orange);color:#fff;padding:12px 14px;border-radius:10px;font-weight:700}
 .upload .btn-ghost{color:var(--ink)}
+
+/* ---- the trail companion on the home page (restored; was lost in the port) ---- */
+.trip{position:fixed;right:0;top:calc(62px + env(safe-area-inset-top,0px));bottom:0;width:150px;z-index:40;pointer-events:none;display:none}
+@media (min-width:1300px){.trip{display:block} body.on-home .wrap{margin-left:max(0px, calc((100% - 1180px) / 2 - 75px));margin-right:auto}}
+.trip svg{width:100%;height:100%;display:block;overflow:visible}
+.trip .road{fill:none;stroke:#3B4A45;stroke-width:24;stroke-linecap:round}
+.trip .edge{fill:none;stroke:#D8E0C8;stroke-width:28;stroke-linecap:round;opacity:.55}
+.trip .mid{fill:none;stroke:#F5F1E6;stroke-width:2.2;stroke-dasharray:10 12;stroke-linecap:round}
+.trip .tree{fill:var(--leaf)}.trip .trunk{fill:#6E4522}
+.trip .sign{pointer-events:auto;cursor:pointer}
+.trip .sign rect{fill:var(--card);stroke:var(--line);stroke-width:1.5}
+.trip .sign text{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:11px;fill:var(--ink)}
+.trip .sign line{stroke:#6E4522;stroke-width:3}
+.trip .sign.passed rect{fill:var(--lime);stroke:var(--lime)}
+.trip .sign.passed text{fill:#fff}
+.trip .sign:hover rect{stroke:var(--orange)}
+.trip .flag{fill:var(--orange)}
+body.trip-hiker .trip .car{display:none}
+body.trip-car .trip .hiker{display:none}
+body.trip-hiker .trip .road{stroke:#8A6A3F;stroke-width:14}
+body.trip-hiker .trip .edge{stroke:#C9B27F;stroke-width:18;opacity:.5}
+body.trip-hiker .trip .mid{stroke:#4A3A22;stroke-width:1.6;stroke-dasharray:3 9}
+body.trip-hiker .trip .sign line{stroke:#8A6A3F}
+.trip .hiker .body{fill:#E85305}.trip .hiker .skin{fill:#131313}.trip .hiker .pack{fill:#2F6B3A}
+.trip .hiker .leg,.trip .hiker .arm,.trip .hiker .stick{stroke:#131313;stroke-width:2.6;stroke-linecap:round;fill:none}
+@media (prefers-reduced-motion: reduce){.trip{display:none}}
+
+/* ---- the founder's text on the home page, and the index pages ---- */
+.oldtext{background:var(--bg-2);border-top:1px solid var(--line)}
+.oldtext details{max-width:72ch}
+.oldtext summary{cursor:pointer;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;padding:8px 0}
+.oldtext .entry{font-size:15px;color:var(--muted);line-height:1.7}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.grid3{grid-template-columns:1fr}}
+.grid3 a.box{text-decoration:none;color:var(--ink);gap:4px}
+.grid3 a.box b{font-family:'Bricolage Grotesque',sans-serif;font-size:18px}
+.grid3 a.box span{font-size:13px;color:var(--muted)}

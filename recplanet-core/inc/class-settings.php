@@ -26,6 +26,7 @@ class Settings {
 		register_setting( self::GROUP, 'rp_counter_headline', [ 'type' => 'string', 'sanitize_callback' => fn( $v ) => in_array( $v, [ 'world', 'us' ], true ) ? $v : 'world', 'default' => 'world' ] );
 		register_setting( self::GROUP, 'rp_contest_days', [ 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 30 ] );
 		register_setting( self::GROUP, 'rp_photo_needs_approval', [ 'type' => 'boolean', 'sanitize_callback' => fn( $v ) => (bool) $v, 'default' => true ] );
+		register_setting( self::GROUP, 'rp_home_text', [ 'type' => 'string', 'sanitize_callback' => 'wp_kses_post', 'default' => '' ] );
 		register_setting( self::GROUP, 'rp_embed_origins', [ 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field', 'default' => '' ] );
 
 		add_settings_section( 'rp_maps', 'Google Maps Platform', fn() => print '<p>The key is stored here and injected into pages at render time. Restrict it to your domain in the Google Cloud console. Enable Maps JavaScript, Static Maps, Street View, Places, Routes, Distance Matrix, Geocoding and Elevation.</p>', 'recplanet' );
@@ -42,6 +43,9 @@ class Settings {
 		add_settings_section( 'rp_contest', 'Contest and photos', '__return_null', 'recplanet' );
 		add_settings_field( 'rp_contest_days', 'Default contest length (days)', fn() => self::text( 'rp_contest_days', 'number' ), 'recplanet', 'rp_contest' );
 		add_settings_field( 'rp_photo_needs_approval', 'Uploads', fn() => print '<label><input type="checkbox" name="rp_photo_needs_approval" value="1" ' . checked( get_option( 'rp_photo_needs_approval', true ), true, false ) . '> An editor approves photos before they show</label>', 'recplanet', 'rp_contest' );
+
+		add_settings_section( 'rp_home', 'Home page text', fn() => print '<p>Shown at the foot of the home page under "About this database, in the founder&rsquo;s words". Plain paragraphs; links allowed.</p>', 'recplanet' );
+		add_settings_field( 'rp_home_text', 'Text', fn() => print '<textarea name="rp_home_text" rows="14" class="large-text">' . esc_textarea( get_option( 'rp_home_text', '' ) ) . '</textarea>', 'recplanet', 'rp_home' );
 
 		add_settings_section( 'rp_embed', 'Embeddable counter', fn() => print '<p>One origin per line, for example https://example.org. Leave empty to allow any site to embed the counter.</p>', 'recplanet' );
 		add_settings_field( 'rp_embed_origins', 'Allowed origins', fn() => print '<textarea name="rp_embed_origins" rows="4" cols="50">' . esc_textarea( get_option( 'rp_embed_origins', '' ) ) . '</textarea>', 'recplanet', 'rp_embed' );

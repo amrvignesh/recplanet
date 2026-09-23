@@ -126,6 +126,17 @@ $posts  = get_posts( [ 'posts_per_page' => 3 ] );
 </section>
 <?php endif; ?>
 
+<?php $oldtext = get_option( 'rp_home_text', '' ); if ( $oldtext ) : ?>
+<section class="oldtext" id="about-database">
+  <div class="wrap">
+    <details>
+      <summary>About this database, in the founder's words</summary>
+      <div class="entry"><?php echo wp_kses_post( wpautop( $oldtext ) ); ?></div>
+    </details>
+  </div>
+</section>
+<?php endif; ?>
+
 <section class="contrib" id="contribute">
   <div class="wrap">
     <div><h2>Your photos belong on the map</h2><p style="margin-top:10px">Join free to upload photos, pin them to the parks you know, and enter the contest. Membership is free and always will be.</p></div>

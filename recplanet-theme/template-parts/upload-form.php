@@ -23,7 +23,7 @@ $park    = $args['park'] ?? null;
       <label for="taken">Taken on<input id="taken" type="date" name="taken_on"></label>
       <label class="ck" style="font-weight:600;font-size:13px"><input type="checkbox" name="rights" value="1" required>I took this photo and hold the rights to it. It was taken in a park or recreation area, and no children are in it.</label>
       <button class="btn btn-lime" type="submit">Submit for review</button>
-      <small class="note" style="margin:0">An editor approves entries before they show. <a href="<?php echo esc_url( home_url( '/contest/rules' ) ); ?>">The rules.</a></small>
+      <small class="note" style="margin:0">An editor approves entries before they show. <a href="<?php echo esc_url( home_url( '/rules' ) ); ?>">The rules.</a></small>
     </form>
   <?php endif; ?>
   <?php if ( ! empty( $_GET['rp_uploaded'] ) ) : ?><div class="notice-ok">Thank you. Your photo is in the queue and will show once an editor approves it.</div><?php endif; ?>

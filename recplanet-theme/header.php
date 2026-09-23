@@ -21,7 +21,7 @@
       if ( has_nav_menu( 'primary' ) ) {
         wp_nav_menu( [ 'theme_location' => 'primary', 'container' => false, 'items_wrap' => '%3$s', 'depth' => 1 ] );
       } else {
-        echo '<a href="' . esc_url( home_url( '/atlas' ) ) . '">Near me</a><a href="' . esc_url( home_url( '/states' ) ) . '">Places</a><a href="' . esc_url( home_url( '/activities' ) ) . '">Activities</a><a href="' . esc_url( home_url( '/contest' ) ) . '">Contest</a><a href="' . esc_url( home_url( '/blog' ) ) . '">Blog</a>';
+        echo '<a href="' . esc_url( home_url( '/atlas' ) ) . '">Near me</a><a href="' . esc_url( home_url( '/states' ) ) . '">Places</a><a href="' . esc_url( home_url( '/activities' ) ) . '">Activities</a><a href="' . esc_url( home_url( '/world' ) ) . '">World Parks</a><a href="' . esc_url( home_url( '/contest' ) ) . '">Contest</a><a href="' . esc_url( home_url( '/blog' ) ) . '">Blog</a>';
       }
       ?>
     </nav>
