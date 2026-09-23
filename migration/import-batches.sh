@@ -7,12 +7,15 @@ HOST=recplanet.wordpress.com@ssh.wp.com
 SSH="ssh -i $KEY -o IdentitiesOnly=yes -o BatchMode=yes -o ServerAliveInterval=60 $HOST"
 LOG="${LOG:-$HOME/recplanet-import.log}"
 LAST="${1:-0}"
+FAILS=0
 BATCH="${BATCH:-1500}"
 echo "start $(date) after=$LAST batch=$BATCH" >> "$LOG"
 while true; do
   OUT=$($SSH "cd ~/htdocs && wp recplanet import parks --after=$LAST --limit=$BATCH --files=/home/150723239/d6-import/files 2>&1 | grep -E 'Success|Error|Fatal' | tail -2")
   echo "$(date +%H:%M) after=$LAST :: $OUT" >> "$LOG"
   N=$(echo "$OUT" | grep -oE '"last_nid":[0-9]+' | grep -oE '[0-9]+$')
+  if [ -z "$OUT" ]; then FAILS=$((FAILS+1)); echo "no answer (attempt $FAILS), retrying in 60s" >> "$LOG"; [ $FAILS -ge 10 ] && { echo "giving up $(date)" >> "$LOG"; exit 1; }; sleep 60; continue; fi
+  FAILS=0
   if [ -z "$N" ] || [ "$N" = "$LAST" ]; then echo "done at nid $LAST $(date)" >> "$LOG"; break; fi
   LAST=$N
 done
