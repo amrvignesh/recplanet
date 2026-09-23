@@ -1,3 +1,4 @@
 migration/samples/
 *.sql.gz
 *.tar.gz
+migration/query_exports/
