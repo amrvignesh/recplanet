@@ -14,8 +14,8 @@ $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
   <div class="contest-hero">
     <div>
       <div class="eyebrow" style="color:var(--lime)">Photo contest</div>
-      <h1 style="color:#fff"><?php echo esc_html( $open ? get_the_title( $open ) : 'Photograph the places you love' ); ?></h1>
-      <p style="margin-top:12px;font-size:17px"><?php echo $open ? wp_kses_post( wpautop( $open->post_content ) ) : 'Photograph a park, pin it to its record, and let the world rate it. Anyone can rate; you join to enter. Prizes go to photographers and to voters.'; ?></p>
+      <h1 style="color:#fff"><?php echo esc_html( $park_pre ? 'Add a photo of ' . get_the_title( $park_pre ) : ( $open ? get_the_title( $open ) : 'Photograph the places you love' ) ); ?></h1>
+      <p style="margin-top:12px;font-size:17px"><?php echo $open ? wp_kses_post( wpautop( $open->post_content ) ) : 'Any recreational photo can enter: a sunset over a lake, a trail, a bird, a frog on a log. Taken in a park or recreation area, rated by anyone from one to five stars. Prizes go to photographers and to voters alike.'; ?></p>
       <?php if ( $open ) : ?>
       <div class="dates">
         <div><small>Entries open</small><b><?php echo esc_html( get_post_meta( $open->ID, 'rp_opens_at', true ) ?: '—' ); ?></b></div>

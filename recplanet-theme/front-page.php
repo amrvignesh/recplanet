@@ -98,7 +98,7 @@ $posts  = get_posts( [ 'posts_per_page' => 3 ] );
   <div class="wrap">
     <div class="section-head">
       <div><div class="eyebrow">Photo contest</div><h2>The places, through members’ eyes</h2></div>
-      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span class="prize">Rate photos, win prizes</span><p>Anyone can rate. Every photo is pinned to the place it was taken.</p></div>
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start"><span class="prize">Rate photos, win prizes</span><p>Anyone can rate. Any recreational photo can enter, from a sunset to a frog on a log.</p></div>
     </div>
     <div class="gallery">
       <?php foreach ( $photos as $i => $p ) : $r = (float) get_post_meta( $p->ID, 'rp_score', true ); ?>

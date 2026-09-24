@@ -19,7 +19,7 @@ $crumbs[] = [ get_the_title(), get_permalink() ];
     <div class="frame"><?php echo has_post_thumbnail() ? get_the_post_thumbnail( $id, 'full' ) : rp_scene_svg( $id ); ?></div>
     <div class="side">
       <div>
-        <div class="eyebrow">Photo<?php echo $park ? ' · pinned to a place' : ''; ?></div>
+        <div class="eyebrow"><?php echo $contest ? 'Contest entry' : 'Photo'; ?><?php echo $park ? ' · taken at a place on file' : ''; ?></div>
         <h1 style="font-size:36px"><?php the_title(); ?></h1>
         <p style="margin-top:10px;color:var(--muted)">by <b><?php echo esc_html( $by ); ?></b><?php if ( $taken ) { echo ' · ' . esc_html( wp_date( 'j F Y', strtotime( $taken ) ) ); } elseif ( get_the_date() ) { echo ' · ' . esc_html( get_the_date( 'j F Y' ) ); } ?><?php if ( $contest ) { echo ' · entered in <a href="' . esc_url( get_permalink( $contest ) ) . '">' . esc_html( get_the_title( $contest ) ) . '</a>'; } ?></p>
         <?php if ( get_the_content() ) : ?><div class="entry" style="margin-top:12px"><?php the_content(); ?></div><?php endif; ?>

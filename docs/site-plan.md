@@ -142,6 +142,8 @@ WordPress.com has no server-level redirect map, so the plugin resolves redirects
 
 ## 5. Members, photos and the contest
 
+Clarified 23 September 2026: the contest is for recreational photos of any subject (the old entries were sunsets, waterfalls, birds, an outhouse), taken in a park or other recreational area as the old rules say; naming the park is optional. Separately, a member can add a photo of a specific park from that park's page, and may tick to enter it in the contest too. Entries carry a title, a few words, and free tags (the old Contest Tags: Florida, water, sunset).
+
 **Roles.** Administrator and Editor manage parks, contests and moderation. A custom `member` role can upload photos, vote, comment, and see their own dashboard. Members cannot create or edit parks. Registration asks for email confirmation; WordPress.com's Akismet plus a honeypot handles the spam that filled the old user table.
 
 **Photo upload.** A front-end form: pick the image, pick the park (search as you type, with the nearest park suggested from the photo's EXIF location), caption, optional contest entry, a checkbox confirming the contributor holds the rights. The photo lands in "pending"; an editor approves from the normal WordPress list. Approved photos appear on the park page and in the contributor's gallery.

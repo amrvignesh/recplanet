@@ -1,6 +1,7 @@
 <?php
 /**
- * Member photo upload: creates a pending rp_photo pinned to a park, with EXIF date and location.
+ * Member photo upload: a contest entry (any recreational photo; the park is optional) or a photo of one park.
+ * Creates a pending rp_photo with EXIF date and, when nothing was chosen, the nearest park from the photo's location.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -43,8 +44,23 @@ function rp_handle_upload(): void {
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 
+	$kind    = 'park' === ( $_POST['kind'] ?? '' ) ? 'park' : 'contest';
 	$title   = sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) ) ?: 'Untitled';
+	$desc    = sanitize_textarea_field( wp_unslash( $_POST['description'] ?? '' ) );
+	$tags    = array_filter( array_map( 'trim', explode( ',', sanitize_text_field( wp_unslash( $_POST['tags'] ?? '' ) ) ) ) );
 	$park_id = (int) ( $_POST['park_id'] ?? 0 );
+	if ( 'park' === $kind && ( ! $park_id || 'rp_park' !== get_post_type( $park_id ) ) ) {
+		wp_safe_redirect( add_query_arg( 'rp_error', 'That park could not be found.', $back ) );
+		exit;
+	}
+	// A contest entry carries the contest; a park photo only when the member ticked "also enter it".
+	$contest_id = 'contest' === $kind ? (int) ( $_POST['contest_id'] ?? 0 ) : (int) ( $_POST['also_contest'] ?? 0 );
+	if ( $contest_id && ( 'rp_contest' !== get_post_type( $contest_id ) || ! in_array( get_post_meta( $contest_id, 'rp_status', true ), [ 'open', 'voting' ], true ) ) ) {
+		$contest_id = 0;
+	}
+	if ( $park_id ) {
+		$back = add_query_arg( 'park', $park_id, $back );
+	}
 	if ( ! $park_id && ! empty( $_POST['park_name'] ) ) {
 		$found = get_posts( [ 'post_type' => 'rp_park', 's' => sanitize_text_field( wp_unslash( $_POST['park_name'] ) ), 'posts_per_page' => 1, 'post_status' => 'publish' ] );
 		$park_id = $found ? $found[0]->ID : 0;
@@ -68,11 +84,12 @@ function rp_handle_upload(): void {
 		}
 	}
 	$photo_id = wp_insert_post( [
-		'post_type'   => 'rp_photo',
-		'post_title'  => $title,
-		'post_status' => get_option( 'rp_photo_needs_approval', true ) ? 'pending' : 'publish',
-		'post_author' => get_current_user_id(),
-		'meta_input'  => [ 'rp_park_id' => $park_id, 'rp_contest_id' => (int) ( $_POST['contest_id'] ?? 0 ), 'rp_taken_on' => $taken, 'rp_votes' => 0, 'rp_score' => 0 ],
+		'post_type'    => 'rp_photo',
+		'post_title'   => $title,
+		'post_content' => $desc,
+		'post_status'  => get_option( 'rp_photo_needs_approval', true ) ? 'pending' : 'publish',
+		'post_author'  => get_current_user_id(),
+		'meta_input'   => [ 'rp_park_id' => $park_id, 'rp_contest_id' => $contest_id, 'rp_kind' => $kind, 'rp_taken_on' => $taken, 'rp_votes' => 0, 'rp_score' => 0 ],
 	], true );
 	if ( is_wp_error( $photo_id ) ) {
 		wp_safe_redirect( add_query_arg( 'rp_error', 'Could not save the photo. Try again.', $back ) );
@@ -85,6 +102,9 @@ function rp_handle_upload(): void {
 		exit;
 	}
 	set_post_thumbnail( $photo_id, $att );
+	if ( $tags ) {
+		wp_set_post_tags( $photo_id, array_slice( array_values( $tags ), 0, 10 ) );
+	}
 	wp_safe_redirect( add_query_arg( 'rp_uploaded', '1', $back . '#enter' ) );
 	exit;
 }
