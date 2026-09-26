@@ -24,8 +24,8 @@ $activity = sanitize_text_field( $_GET['activity'] ?? '' );
   <aside>
     <div><h4>Travel time from you</h4><div class="seg" id="travel"><button type="button" data-km="1.25" data-mode="walk" class="on">Walk 15</button><button type="button" data-km="3.75" data-mode="bike">Bike 15</button><button type="button" data-km="25" data-mode="drive">Drive 30</button></div><p class="note" style="margin-top:6px">Press <b>Put me here</b> on the map, then tap a spot, or use <b>Locate me</b>.</p></div>
     <div><h4>Activity lens</h4><div class="chips" id="lens"><button class="chip on" type="button" data-a="">Any</button>
-      <?php foreach ( [ 'Playground', 'Fishing', 'Hiking', 'Camping', 'Swimming', 'Disc-Golf', 'Dog-Park', 'Kayaking', 'Skate Park', 'Basketball', 'Picnicking', 'Biking' ] as $a ) : ?><button class="chip" type="button" data-a="<?php echo esc_attr( $a ); ?>"><?php echo esc_html( $a ); ?></button><?php endforeach; ?>
-      <select id="lensMore" aria-label="More activities"><option value="">More…</option><?php foreach ( RP\ACTIVITIES as $a ) : ?><option value="<?php echo esc_attr( $a ); ?>"><?php echo esc_html( $a ); ?></option><?php endforeach; ?></select>
+      <?php $rp_lens = [ 'Playground', 'Fishing', 'Hiking', 'Camping', 'Swimming', 'Disc-Golf', 'Dog-Park', 'Kayaking', 'Skate Park', 'Basketball', 'Picnicking', 'Biking' ]; sort( $rp_lens, SORT_NATURAL | SORT_FLAG_CASE ); foreach ( $rp_lens as $a ) : ?><button class="chip" type="button" data-a="<?php echo esc_attr( $a ); ?>"><?php echo esc_html( $a ); ?></button><?php endforeach; ?>
+      <select id="lensMore" aria-label="More activities"><option value="">More…</option><?php $rp_all = RP\ACTIVITIES; sort( $rp_all, SORT_NATURAL | SORT_FLAG_CASE ); foreach ( $rp_all as $a ) : ?><option value="<?php echo esc_attr( $a ); ?>"><?php echo esc_html( $a ); ?></option><?php endforeach; ?></select>
     </div></div>
     <div><h4>Managed by</h4>
       <?php foreach ( RP\STEWARD_LEVELS as $k => $lbl ) : ?><label class="ck"><input type="checkbox" class="stw" value="<?php echo esc_attr( $k ); ?>" checked><?php echo esc_html( $lbl ); ?></label><?php endforeach; ?>
