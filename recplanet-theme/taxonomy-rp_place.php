@@ -34,7 +34,7 @@ $lead    = sprintf( '%s %s across %s acres%s. %s',
       <?php if ( $acts || $filter ) : ?>
       <div class="chips" style="margin-top:18px">
         <?php if ( $filter ) : ?><a class="chip" href="<?php echo esc_url( get_term_link( $t ) ); ?>">← Everything in <?php echo esc_html( $t->name ); ?></a><?php endif; ?>
-        <?php $i = 0; foreach ( $acts as $name => $n ) : if ( $i++ >= 12 ) break; $at = get_term_by( 'name', $name, 'rp_activity' ); if ( ! $at ) continue; ?>
+        <?php $top = array_slice( $acts, 0, 12, true ); ksort( $top, SORT_NATURAL | SORT_FLAG_CASE ); foreach ( $top as $name => $n ) : $at = get_term_by( 'name', $name, 'rp_activity' ); if ( ! $at ) continue; ?>
           <a class="chip<?php echo $filter && $filter->term_id === $at->term_id ? ' on' : ''; ?>" href="<?php echo esc_url( rp_place_url( $t, $at ) ); ?>"><?php echo esc_html( $name ); ?> <span class="n"><?php echo esc_html( number_format( $n ) ); ?></span></a>
         <?php endforeach; ?>
       </div>
