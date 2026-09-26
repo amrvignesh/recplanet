@@ -32,6 +32,7 @@ require_once RP_CORE_DIR . 'inc/class-park-admin.php';
 require_once RP_CORE_DIR . 'inc/class-photo-admin.php';
 require_once RP_CORE_DIR . 'inc/class-contest-admin.php';
 require_once RP_CORE_DIR . 'inc/class-tools-admin.php';
+require_once RP_CORE_DIR . 'inc/class-members.php';
 require_once RP_CORE_DIR . 'inc/class-draw.php';
 require_once RP_CORE_DIR . 'inc/class-roles.php';
 
@@ -70,6 +71,7 @@ add_action( 'plugins_loaded', function () {
 	RP\Photo_Admin::init();
 	RP\Contest_Admin::init();
 	RP\Tools_Admin::init();
+	RP\Members::init();
 	RP\Draw::init();
 	RP\Tables::maybe_upgrade();
 } );

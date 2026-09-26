@@ -16,9 +16,11 @@ mk() {
 mk acre-counter "Acre Counter" page-acre-counter.php ""
 mk blog-tags "Blog Tags" page-blog-tags.php ""
 mk contact "Contact Us" page-contact.php ~/d6-import/text/contact-intro.html
+mk join "Join RecPlanet" page-join.php ~/d6-import/text/join-intro.html
+mk sign-in "Sign in" page-sign-in.php ~/d6-import/text/signin-intro.html
 wp rewrite flush --hard >/dev/null 2>&1
 wp edge-cache purge --domain=recplanet.wpcomstaging.com >/dev/null 2>&1
-for u in "/acre-counter/" "/acre-counter/?country=us" "/acre-counter/?country=us&state=TX" "/blog-tags/" "/contact/"; do
+for u in "/acre-counter/" "/blog-tags/" "/contact/" "/join/" "/sign-in/"; do
   curl -sL -o /tmp/p.html "https://recplanet.wpcomstaging.com$u"
   echo "$u errs=$(grep -cE 'Fatal|Warning:' /tmp/p.html) h1=[$(grep -oE '<h1[^>]*>[^<]*' /tmp/p.html | head -1 | sed 's/<h1[^>]*>//')] form=$(grep -c 'id="contactForm"' /tmp/p.html) captcha=$(grep -c 'c_answer' /tmp/p.html)"
 done

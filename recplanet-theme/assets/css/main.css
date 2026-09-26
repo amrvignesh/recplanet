@@ -606,3 +606,7 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
 .topbar .board a:hover{color:#fff}
 .topbar .board strong{color:#fff}
 @media (max-width:1100px){.topbar .board .wrap{font-size:13px;padding:7px 0}}
+
+/* ---- join and sign-in ---- */
+.auth-form .ck input{width:auto;min-height:0}
+.auth-form .ttl{margin-bottom:2px}

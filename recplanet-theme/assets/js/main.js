@@ -298,4 +298,27 @@
       }).catch(function () { fail('The connection dropped. Try again.'); });
     });
   }
+
+  /* ---- join and sign-in forms: post to the plugin, then go where the visitor was headed ---- */
+  ['joinForm', 'signinForm'].forEach(function (id) {
+    var f = document.getElementById(id);
+    if (!f) return;
+    var msg = f.querySelector('.form-msg'), btn = f.querySelector('button[type=submit]'), ans = f.querySelector('input[name=answer]');
+    function fresh() {
+      if (!ans) return;
+      api('contact/challenge?_=' + Date.now()).then(function (c) { if (c && c.token) { f.querySelector('.captcha span').textContent = c.question; f.querySelector('input[name=token]').value = c.token; ans.value = ''; } }).catch(function () {});
+    }
+    fresh();
+    function fail(t) { msg.hidden = false; msg.className = 'form-msg'; msg.textContent = t; btn.disabled = false; }
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var body = {}; new FormData(f).forEach(function (v, k) { body[k] = v; });
+      var ts = f.querySelector('input[name="cf-turnstile-response"]'); if (ts) body.turnstile = ts.value;
+      btn.disabled = true; msg.hidden = true;
+      api(id === 'joinForm' ? 'join' : 'signin', { method: 'POST', body: body }).then(function (d) {
+        if (d && d.ok) { window.location.href = d.to || (RPc.home + 'contest/'); }
+        else { fail((d && d.error) || 'Something went wrong. Try again.'); fresh(); if (window.turnstile) { try { window.turnstile.reset(); } catch (x) {} } }
+      }).catch(function () { fail('The connection dropped. Try again.'); });
+    });
+  });
 })();
