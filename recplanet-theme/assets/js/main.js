@@ -322,6 +322,7 @@
       btn.disabled = true; msg.hidden = true;
       api(id === 'joinForm' ? 'join' : 'signin', { method: 'POST', body: body }).then(function (d) {
         if (d && d.ok) { window.location.href = d.to || (RPc.home + 'contest/'); }
+        else if (d && d.editor && d.to) { msg.hidden = false; msg.className = 'form-msg ok'; msg.textContent = d.error; window.location.href = d.to; }
         else { fail((d && d.error) || 'Something went wrong. Try again.'); fresh(); if (window.turnstile) { try { window.turnstile.reset(); } catch (x) {} } }
       }).catch(function (err) { fail(err && err.message && err.message.indexOf('The server answered') === 0 ? err.message : 'The connection dropped. Try again.'); });
     });

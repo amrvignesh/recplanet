@@ -128,7 +128,14 @@ class Members {
 		if ( self::too_many( 'signin', 8 ) ) {
 			return new \WP_REST_Response( [ 'error' => 'Too many attempts from this connection. Try again in a few minutes.' ], 429 );
 		}
-		$user = wp_signon( [ 'user_login' => sanitize_text_field( (string) $r['login'] ), 'user_password' => (string) $r['password'], 'remember' => ! empty( $r['remember'] ) ], is_ssl() );
+		$login = sanitize_text_field( (string) $r['login'] );
+		$known = is_email( $login ) ? get_user_by( 'email', $login ) : get_user_by( 'login', $login );
+		if ( $known instanceof \WP_User && ( user_can( $known, 'edit_posts' ) || user_can( $known, 'edit_rp_parks' ) || user_can( $known, 'manage_options' ) ) ) {
+			// Editors and administrators sign in on core's screen, where Jetpack's account protection can run its checks.
+			$to = add_query_arg( 'redirect_to', rawurlencode( wp_validate_redirect( (string) $r['redirect_to'], admin_url() ) ), site_url( 'wp-login.php', 'login' ) );
+			return new \WP_REST_Response( [ 'ok' => false, 'editor' => true, 'to' => $to, 'error' => 'Editors sign in on the dashboard screen. Taking you there.' ] );
+		}
+		$user = wp_signon( [ 'user_login' => $login, 'user_password' => (string) $r['password'], 'remember' => ! empty( $r['remember'] ) ], is_ssl() );
 		if ( is_wp_error( $user ) ) {
 			return new \WP_REST_Response( [ 'error' => 'That email or username and password do not match.' ], 401 );
 		}

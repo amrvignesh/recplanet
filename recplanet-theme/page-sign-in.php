@@ -33,7 +33,7 @@ $to = wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ?? '' ), '' );
       <input type="hidden" name="redirect_to" value="<?php echo esc_attr( $to ); ?>">
       <button class="btn btn-orange" type="submit">Sign in</button>
       <div class="form-msg" id="signinMsg" hidden></div>
-      <small class="note" style="margin:0"><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgotten your password?</a></small>
+      <small class="note" style="margin:0"><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgotten your password?</a> · Editors and administrators: <a href="<?php echo esc_url( site_url( 'wp-login.php', 'login' ) ); ?>">dashboard sign-in</a>.</small>
     </form>
   </div>
 </div>
