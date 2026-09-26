@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Members join and sign in on the site's own pages (/join/, /sign-in/) and never see wp-admin.
- * Sign-in posts to core's handler so Jetpack's account checks run for editors; failures come back to the site's page.
+ * Sign-in posts to the plugin as a page request so Jetpack's account checks run for editors; failures come back to the page.
  * Editors and administrators keep the dashboard and the admin bar. Lost-password stays on core's screen.
  */
 class Members {
@@ -18,8 +18,8 @@ class Members {
 		add_action( 'rest_api_init', [ __CLASS__, 'routes' ] );
 		add_filter( 'login_redirect', [ __CLASS__, 'after_login' ], 10, 3 );
 		add_filter( 'registration_redirect', fn() => home_url( '/contest/' ) );
-		add_action( 'wp_login_failed', [ __CLASS__, 'failed' ] );
-		add_filter( 'authenticate', [ __CLASS__, 'empty_fields' ], 30, 3 );
+		add_action( 'admin_post_nopriv_rp_signin', [ __CLASS__, 'signin' ] );
+		add_action( 'admin_post_rp_signin', [ __CLASS__, 'signin' ] );
 		add_filter( 'logout_redirect', fn() => home_url( '/sign-in/?out=1' ) );
 	}
 
@@ -35,11 +35,6 @@ class Members {
 		return $redirect ? add_query_arg( 'redirect_to', rawurlencode( $redirect ), home_url( '/sign-in/' ) ) : home_url( '/sign-in/' );
 	}
 
-	/** True when the credentials came from the site's own sign-in page rather than core's screen. */
-	private static function from_site_form(): bool {
-		return ! empty( $_POST['rp_signin'] );
-	}
-
 	private static function back_to_form( string $flag ): void {
 		$args = [ $flag => '1' ];
 		if ( ! empty( $_POST['log'] ) ) {
@@ -52,19 +47,31 @@ class Members {
 		exit;
 	}
 
-	/** Wrong password: back to the site's page with the notice, not core's screen. */
-	public static function failed( string $username ): void {
-		if ( self::from_site_form() ) {
-			self::back_to_form( 'failed' );
-		}
-	}
-
-	/** Core does not fire wp_login_failed for an empty field; catch that here. */
-	public static function empty_fields( $user, string $username, string $password ) {
-		if ( self::from_site_form() && ( '' === $username || '' === $password ) ) {
+	/**
+	 * The site's sign-in form posts here as an ordinary page request, so Jetpack's account checks (which redirect to
+	 * their own screen after a login) work for editors, and core's login screen, which this host hands to
+	 * WordPress.com, is never involved. Wrong details go back to the form with a notice.
+	 */
+	public static function signin(): void {
+		$login = sanitize_text_field( wp_unslash( $_POST['log'] ?? '' ) );
+		$pass  = (string) ( $_POST['pwd'] ?? '' );
+		if ( '' === $login || '' === $pass ) {
 			self::back_to_form( 'empty' );
 		}
-		return $user;
+		if ( self::too_many( 'signin', 8 ) ) {
+			self::back_to_form( 'failed' );
+		}
+		$user = wp_signon( [ 'user_login' => $login, 'user_password' => $pass, 'remember' => ! empty( $_POST['rememberme'] ) ], is_ssl() );
+		if ( is_wp_error( $user ) ) {
+			self::back_to_form( 'failed' );
+		}
+		wp_set_current_user( $user->ID );
+		$to = wp_validate_redirect( wp_unslash( $_POST['redirect_to'] ?? '' ), '' );
+		if ( '' === $to ) {
+			$to = user_can( $user, 'edit_rp_parks' ) || user_can( $user, 'edit_posts' ) ? admin_url() : home_url( '/contest/' );
+		}
+		wp_safe_redirect( apply_filters( 'login_redirect', $to, $to, $user ) );
+		exit;
 	}
 
 	/** A member who lands in wp-admin is sent to the contest page; form handlers and ajax still work. */

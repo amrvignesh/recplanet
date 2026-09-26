@@ -25,7 +25,8 @@ $to = wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ?? '' ), '' );
         <p class="note" style="margin:6px 0 0">Rating photos needs no account.</p>
       </div>
     </div>
-    <form class="contact-form auth-form" method="post" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>">
+    <form class="contact-form auth-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+      <input type="hidden" name="action" value="rp_signin">
       <b class="ttl">Sign in</b>
       <?php if ( ! empty( $_GET['failed'] ) ) : ?><div class="form-msg">That email or username and password do not match.</div><?php elseif ( ! empty( $_GET['empty'] ) ) : ?><div class="form-msg">Both the email or username and the password are needed.</div><?php elseif ( ! empty( $_GET['out'] ) ) : ?><div class="form-msg ok">You are signed out.</div><?php endif; ?>
       <label for="s_login">Email or username<input id="s_login" name="log" type="text" required maxlength="120" autocomplete="username" value="<?php echo esc_attr( sanitize_text_field( wp_unslash( $_GET['log'] ?? '' ) ) ); ?>"></label>
