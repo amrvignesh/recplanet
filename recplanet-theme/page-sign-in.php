@@ -25,15 +25,16 @@ $to = wp_validate_redirect( wp_unslash( $_GET['redirect_to'] ?? '' ), '' );
         <p class="note" style="margin:6px 0 0">Rating photos needs no account.</p>
       </div>
     </div>
-    <form class="contact-form auth-form" id="signinForm" novalidate>
+    <form class="contact-form auth-form" method="post" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>">
       <b class="ttl">Sign in</b>
-      <label for="s_login">Email or username<input id="s_login" name="login" type="text" required maxlength="120" autocomplete="username"></label>
-      <label for="s_pass">Password<input id="s_pass" name="password" type="password" required autocomplete="current-password"></label>
-      <label class="ck" style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input type="checkbox" name="remember" value="1" checked style="width:auto;min-height:0">Keep me signed in</label>
+      <?php if ( ! empty( $_GET['failed'] ) ) : ?><div class="form-msg">That email or username and password do not match.</div><?php elseif ( ! empty( $_GET['empty'] ) ) : ?><div class="form-msg">Both the email or username and the password are needed.</div><?php elseif ( ! empty( $_GET['out'] ) ) : ?><div class="form-msg ok">You are signed out.</div><?php endif; ?>
+      <label for="s_login">Email or username<input id="s_login" name="log" type="text" required maxlength="120" autocomplete="username" value="<?php echo esc_attr( sanitize_text_field( wp_unslash( $_GET['log'] ?? '' ) ) ); ?>"></label>
+      <label for="s_pass">Password<input id="s_pass" name="pwd" type="password" required autocomplete="current-password"></label>
+      <label class="ck" style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input type="checkbox" name="rememberme" value="forever" checked style="width:auto;min-height:0">Keep me signed in</label>
       <input type="hidden" name="redirect_to" value="<?php echo esc_attr( $to ); ?>">
+      <input type="hidden" name="rp_signin" value="1">
       <button class="btn btn-orange" type="submit">Sign in</button>
-      <div class="form-msg" id="signinMsg" hidden></div>
-      <small class="note" style="margin:0"><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgotten your password?</a> · Editors and administrators: <a href="<?php echo esc_url( site_url( 'wp-login.php', 'login' ) ); ?>">dashboard sign-in</a>.</small>
+      <small class="note" style="margin:0"><a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Forgotten your password?</a></small>
     </form>
   </div>
 </div>

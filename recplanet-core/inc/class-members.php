@@ -5,7 +5,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Members join and sign in on the site's own pages (/join/, /sign-in/) and never see wp-admin.
- * Editors and administrators keep the dashboard. Lost-password and logout stay on core's screens.
+ * Sign-in posts to core's handler so Jetpack's account checks run for editors; failures come back to the site's page.
+ * Editors and administrators keep the dashboard and the admin bar. Lost-password stays on core's screen.
  */
 class Members {
 
@@ -17,6 +18,9 @@ class Members {
 		add_action( 'rest_api_init', [ __CLASS__, 'routes' ] );
 		add_filter( 'login_redirect', [ __CLASS__, 'after_login' ], 10, 3 );
 		add_filter( 'registration_redirect', fn() => home_url( '/contest/' ) );
+		add_action( 'wp_login_failed', [ __CLASS__, 'failed' ] );
+		add_filter( 'authenticate', [ __CLASS__, 'empty_fields' ], 30, 3 );
+		add_filter( 'logout_redirect', fn() => home_url( '/sign-in/?out=1' ) );
 	}
 
 	public static function is_editor(): bool {
@@ -29,6 +33,38 @@ class Members {
 			return $url;
 		}
 		return $redirect ? add_query_arg( 'redirect_to', rawurlencode( $redirect ), home_url( '/sign-in/' ) ) : home_url( '/sign-in/' );
+	}
+
+	/** True when the credentials came from the site's own sign-in page rather than core's screen. */
+	private static function from_site_form(): bool {
+		return ! empty( $_POST['rp_signin'] );
+	}
+
+	private static function back_to_form( string $flag ): void {
+		$args = [ $flag => '1' ];
+		if ( ! empty( $_POST['log'] ) ) {
+			$args['log'] = sanitize_text_field( wp_unslash( $_POST['log'] ) );
+		}
+		if ( ! empty( $_POST['redirect_to'] ) ) {
+			$args['redirect_to'] = wp_validate_redirect( wp_unslash( $_POST['redirect_to'] ), '' );
+		}
+		wp_safe_redirect( add_query_arg( array_filter( $args ), home_url( '/sign-in/' ) ) );
+		exit;
+	}
+
+	/** Wrong password: back to the site's page with the notice, not core's screen. */
+	public static function failed( string $username ): void {
+		if ( self::from_site_form() ) {
+			self::back_to_form( 'failed' );
+		}
+	}
+
+	/** Core does not fire wp_login_failed for an empty field; catch that here. */
+	public static function empty_fields( $user, string $username, string $password ) {
+		if ( self::from_site_form() && ( '' === $username || '' === $password ) ) {
+			self::back_to_form( 'empty' );
+		}
+		return $user;
 	}
 
 	/** A member who lands in wp-admin is sent to the contest page; form handlers and ajax still work. */
@@ -55,7 +91,6 @@ class Members {
 
 	public static function routes(): void {
 		register_rest_route( 'recplanet/v1', '/join', [ 'methods' => 'POST', 'callback' => [ __CLASS__, 'join' ], 'permission_callback' => '__return_true' ] );
-		register_rest_route( 'recplanet/v1', '/signin', [ 'methods' => 'POST', 'callback' => [ __CLASS__, 'signin' ], 'permission_callback' => '__return_true' ] );
 	}
 
 	private static function too_many( string $what, int $limit ): bool {
@@ -122,30 +157,6 @@ class Members {
 		wp_set_auth_cookie( $id, true );
 		do_action( 'wp_login', $login, get_user_by( 'id', $id ) );
 		return new \WP_REST_Response( [ 'ok' => true, 'to' => self::safe_to( (string) $r['redirect_to'] ) ] );
-	}
-
-	public static function signin( \WP_REST_Request $r ): \WP_REST_Response {
-		if ( self::too_many( 'signin', 8 ) ) {
-			return new \WP_REST_Response( [ 'error' => 'Too many attempts from this connection. Try again in a few minutes.' ], 429 );
-		}
-		$login = sanitize_text_field( (string) $r['login'] );
-		$known = is_email( $login ) ? get_user_by( 'email', $login ) : get_user_by( 'login', $login );
-		if ( $known instanceof \WP_User && ( user_can( $known, 'edit_posts' ) || user_can( $known, 'edit_rp_parks' ) || user_can( $known, 'manage_options' ) ) ) {
-			// Editors and administrators sign in on core's screen, where Jetpack's account protection can run its checks.
-			$rt = wp_validate_redirect( (string) $r['redirect_to'], '' );
-			$to = add_query_arg( 'redirect_to', rawurlencode( '' !== $rt ? $rt : admin_url() ), site_url( 'wp-login.php', 'login' ) );
-			return new \WP_REST_Response( [ 'ok' => false, 'editor' => true, 'to' => $to, 'error' => 'Editors sign in on the dashboard screen. Taking you there.' ] );
-		}
-		$user = wp_signon( [ 'user_login' => $login, 'user_password' => (string) $r['password'], 'remember' => ! empty( $r['remember'] ) ], is_ssl() );
-		if ( is_wp_error( $user ) ) {
-			return new \WP_REST_Response( [ 'error' => 'That email or username and password do not match.' ], 401 );
-		}
-		wp_set_current_user( $user->ID );
-		$to = self::safe_to( (string) $r['redirect_to'] );
-		if ( ! user_can( $user, 'edit_rp_parks' ) && ! user_can( $user, 'edit_posts' ) && str_contains( $to, 'wp-admin' ) ) {
-			$to = home_url( '/contest/' );
-		}
-		return new \WP_REST_Response( [ 'ok' => true, 'to' => $to ] );
 	}
 
 	private static function safe_to( string $to ): string {

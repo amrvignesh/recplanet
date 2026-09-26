@@ -610,3 +610,8 @@ h1.tag{font-weight:600;margin:0;letter-spacing:0}
 /* ---- join and sign-in ---- */
 .auth-form .ck input{width:auto;min-height:0}
 .auth-form .ttl{margin-bottom:2px}
+
+/* ---- the WordPress bar for editors and administrators: the sticky menu ribbon sits beneath it ---- */
+body.admin-bar .bar{top:calc(32px + env(safe-area-inset-top,0px))}
+@media (max-width:782px){body.admin-bar .bar{top:calc(46px + env(safe-area-inset-top,0px))}}
+body.admin-bar .trip{top:calc(94px + env(safe-area-inset-top,0px))}
