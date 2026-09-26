@@ -733,7 +733,8 @@ class Import_Command {
 			// Countries and regions named by their code get their name (BC -> British Columbia).
 			if ( in_array( $level, [ 'country', 'state' ], true ) ) {
 				$code = (string) get_term_meta( $t->term_id, 'rp_code', true );
-				$name = 'country' === $level ? country_name( $code ) : region_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
+				$name = 'country' === $level ? \RP\country_name( $code ) : \RP\region_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
+egion_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
 				if ( '' !== $code && $name !== $t->name && strtoupper( $t->name ) === strtoupper( $code ) ) {
 					wp_update_term( $t->term_id, TAX_PLACE, [ 'name' => $name ] );
 				}
