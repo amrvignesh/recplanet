@@ -63,6 +63,7 @@ add_action( 'plugins_loaded', function () {
 	RP\Votes::init();
 	RP\Freshness::init();
 	RP\Messages::init();
+	RP\Park_Admin::init();
 	RP\Draw::init();
 	RP\Tables::maybe_upgrade();
 } );
