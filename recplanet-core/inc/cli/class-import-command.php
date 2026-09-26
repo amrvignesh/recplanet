@@ -734,7 +734,6 @@ class Import_Command {
 			if ( in_array( $level, [ 'country', 'state' ], true ) ) {
 				$code = (string) get_term_meta( $t->term_id, 'rp_code', true );
 				$name = 'country' === $level ? \RP\country_name( $code ) : \RP\region_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
-egion_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
 				if ( '' !== $code && $name !== $t->name && strtoupper( $t->name ) === strtoupper( $code ) ) {
 					wp_update_term( $t->term_id, TAX_PLACE, [ 'name' => $name ] );
 				}
