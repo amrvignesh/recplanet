@@ -8,8 +8,13 @@
   function api(path, opts) {
     opts = opts || {};
     var h = { 'Content-Type': 'application/json' };
-    if (RPc.nonce) h['X-WP-Nonce'] = RPc.nonce;
-    return fetch(RPc.rest + path, { method: opts.method || 'GET', headers: h, credentials: 'same-origin', body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) { return r.json(); });
+    // The nonce only matters for a signed-in member; a visitor's page may be cached with a stale one, which would fail the cookie check.
+    if (RPc.nonce && document.body.classList.contains('logged-in')) h['X-WP-Nonce'] = RPc.nonce;
+    return fetch(RPc.rest + path, { method: opts.method || 'GET', headers: h, credentials: 'same-origin', body: opts.body ? JSON.stringify(opts.body) : undefined }).then(function (r) {
+      return r.text().then(function (t) {
+        try { return JSON.parse(t); } catch (e) { throw new Error('The server answered ' + r.status + (t ? ': ' + t.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) : '')); }
+      });
+    });
   }
   function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
   function fmtAc(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -318,7 +323,7 @@
       api(id === 'joinForm' ? 'join' : 'signin', { method: 'POST', body: body }).then(function (d) {
         if (d && d.ok) { window.location.href = d.to || (RPc.home + 'contest/'); }
         else { fail((d && d.error) || 'Something went wrong. Try again.'); fresh(); if (window.turnstile) { try { window.turnstile.reset(); } catch (x) {} } }
-      }).catch(function () { fail('The connection dropped. Try again.'); });
+      }).catch(function (err) { fail(err && err.message && err.message.indexOf('The server answered') === 0 ? err.message : 'The connection dropped. Try again.'); });
     });
   });
 })();

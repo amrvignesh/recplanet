@@ -3,6 +3,10 @@
  * Template Name: Contact
  * The contact form: stored in the site's inbox, emailed to the owner, guarded by a captcha.
  */
+if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+	define( 'DONOTCACHEPAGE', true );   // the form carries a signed challenge and a start time; never serve a cached copy
+}
+nocache_headers();
 get_header();
 $park = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
 $pre  = sanitize_key( $_GET['about'] ?? '' );

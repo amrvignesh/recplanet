@@ -7,6 +7,10 @@ if ( is_user_logged_in() ) {
 	wp_safe_redirect( home_url( '/contest/' ) );
 	exit;
 }
+if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+	define( 'DONOTCACHEPAGE', true );   // the form carries a signed challenge and a start time; never serve a cached copy
+}
+nocache_headers();
 get_header();
 $site = get_option( 'rp_turnstile_site', '' );
 $chal = $site ? null : RP\Messages::challenge();
