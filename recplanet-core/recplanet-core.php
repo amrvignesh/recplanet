@@ -28,6 +28,7 @@ require_once RP_CORE_DIR . 'inc/class-rewrites.php';
 require_once RP_CORE_DIR . 'inc/class-votes.php';
 require_once RP_CORE_DIR . 'inc/class-freshness.php';
 require_once RP_CORE_DIR . 'inc/class-messages.php';
+require_once RP_CORE_DIR . 'inc/class-park-admin.php';
 require_once RP_CORE_DIR . 'inc/class-draw.php';
 require_once RP_CORE_DIR . 'inc/class-roles.php';
 
