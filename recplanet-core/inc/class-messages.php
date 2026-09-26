@@ -119,7 +119,6 @@ class Messages {
 		add_submenu_page( 'rp-inbox', 'Inbox', 'Inbox' . self::badge( $m ), 'edit_rp_parks', 'rp-inbox', [ __CLASS__, 'inbox' ] );
 		add_submenu_page( 'rp-inbox', 'Corrections', 'Corrections' . self::badge( $c ), 'edit_rp_parks', 'rp-corrections', [ __CLASS__, 'corrections' ] );
 		add_submenu_page( 'rp-inbox', 'Prize draw', 'Prize draw', 'edit_rp_contests', 'rp-draw-link', function () { wp_safe_redirect( admin_url( 'edit.php?post_type=rp_contest&page=rp-draw' ) ); exit; } );
-		add_submenu_page( 'rp-inbox', 'Settings', 'Settings', 'manage_options', 'rp-settings-link', function () { wp_safe_redirect( admin_url( 'options-general.php?page=recplanet' ) ); exit; } );
 	}
 
 	public static function admin_bar( \WP_Admin_Bar $bar ): void {

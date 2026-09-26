@@ -22,13 +22,22 @@ class Settings {
 		return trim( (string) get_option( 'rp_board_text', self::DEFAULT_BOARD ) );
 	}
 
+	const CAP = 'edit_rp_parks';     // editors run the site day to day, so the settings are theirs too
+
 	public static function init(): void {
-		add_action( 'admin_menu', [ __CLASS__, 'menu' ] );
+		add_action( 'admin_menu', [ __CLASS__, 'menu' ], 11 );     // after the RecPlanet menu exists
 		add_action( 'admin_init', [ __CLASS__, 'register' ] );
+		add_filter( 'option_page_capability_' . self::GROUP, fn() => self::CAP );
 	}
 
 	public static function menu(): void {
-		add_options_page( 'RecPlanet', 'RecPlanet', 'manage_options', 'recplanet', [ __CLASS__, 'render' ] );
+		add_submenu_page( 'rp-inbox', 'RecPlanet settings', 'Settings', self::CAP, 'rp-settings', [ __CLASS__, 'render' ] );
+		// The old address under Settings keeps working for administrators: it forwards to the page above.
+		$hook = add_options_page( 'RecPlanet', 'RecPlanet', 'manage_options', 'recplanet', '__return_null' );
+		add_action( 'load-' . $hook, function () {
+			wp_safe_redirect( admin_url( 'admin.php?page=rp-settings' ) );
+			exit;
+		} );
 	}
 
 	public static function register(): void {
@@ -82,7 +91,7 @@ class Settings {
 
 	public static function render(): void {
 		$drift = get_option( 'rp_counter_drift' );
-		echo '<div class="wrap"><h1>RecPlanet</h1>';
+		echo '<div class="wrap"><h1>RecPlanet settings</h1>';
 		$w = Counter::get( 'world', 'world' );
 		echo '<p>Counter now: <strong>' . esc_html( format_acres( $w['acres'] ) ) . '</strong> acres across <strong>' . esc_html( number_format( $w['count'] ) ) . '</strong> published parks.</p>';
 		if ( $drift ) {
