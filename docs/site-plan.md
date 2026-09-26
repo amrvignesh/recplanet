@@ -271,6 +271,10 @@ A WP-CLI command in the companion plugin, run over SSH on WordPress.com, reading
 
 WordPress keeps term slugs unique across a taxonomy, so the second Springfield gets a slug like `springfield-union-county`. Places are therefore found by name under their parent, and every place term carries `rp_slug`, the segment its URL uses, in term meta. Cities sit under their county when the record names one, else directly under the state, and a park with both carries both terms. `wp recplanet places` repairs any park that is on the wrong term.
 
+### The admin side (completed 26 September 2026)
+
+Parks: a Park details box (country, state, city required; county, address, acreage, coordinates, website, last verified), the classic editor, list columns for city, state and acres, a state filter and a "missing" filter (acreage, coordinates, city, activities, suggestions, photo). Parks › Suggestions approves the backfill's proposals in bulk or per activity, in batches that never time out. Photos: a Photo details box (park with live search, contest, taken on, photographer), list columns with thumbnail, park, contest and rating, and a pending count on the menu; approving is publishing. Contests: a Contest details box (status, three dates, prizes, three winners picked from the entries by rating) and list columns. RecPlanet menu: Inbox, Corrections, Missing links (every address that reached the site and found nothing, with hits and referrer, turned into a redirect in one box; redirects added by hand listed with their hits), Data quality (the counter's numbers, each linking to the parks to fix, and a rebuild button), Prize draw, Settings. Member registration is on with the Member role as default; it must be on in production too.
+
 ## 10a. Settings held in the admin
 
 A settings page in the plugin holds the Google Maps Platform API key (decided 21 September 2026: entered by the admin, never in code), the counter display options, contest defaults, the embed widget's allowed origins, and (added 23 September 2026) the contact form: the address messages go to and optional Cloudflare Turnstile keys.

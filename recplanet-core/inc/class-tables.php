@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Tables {
 
-	const SCHEMA_VERSION = 4;
+	const SCHEMA_VERSION = 5;
 
 	public static function install(): void {
 		global $wpdb;
@@ -101,6 +101,16 @@ class Tables {
 			read_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
 			KEY unread (read_at,id)
+		) $charset;" );
+
+		// Addresses that reached the site and matched nothing: the Missing links page turns them into redirects.
+		dbDelta( "CREATE TABLE " . table( 'misses' ) . " (
+			path varchar(191) NOT NULL,
+			hits int(10) unsigned NOT NULL DEFAULT 1,
+			referrer varchar(191) NOT NULL DEFAULT '',
+			last_seen datetime NOT NULL,
+			PRIMARY KEY  (path),
+			KEY hits (hits)
 		) $charset;" );
 
 		dbDelta( "CREATE TABLE " . table( 'redirects' ) . " (

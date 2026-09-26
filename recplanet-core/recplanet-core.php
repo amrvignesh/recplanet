@@ -29,6 +29,9 @@ require_once RP_CORE_DIR . 'inc/class-votes.php';
 require_once RP_CORE_DIR . 'inc/class-freshness.php';
 require_once RP_CORE_DIR . 'inc/class-messages.php';
 require_once RP_CORE_DIR . 'inc/class-park-admin.php';
+require_once RP_CORE_DIR . 'inc/class-photo-admin.php';
+require_once RP_CORE_DIR . 'inc/class-contest-admin.php';
+require_once RP_CORE_DIR . 'inc/class-tools-admin.php';
 require_once RP_CORE_DIR . 'inc/class-draw.php';
 require_once RP_CORE_DIR . 'inc/class-roles.php';
 
@@ -64,6 +67,9 @@ add_action( 'plugins_loaded', function () {
 	RP\Freshness::init();
 	RP\Messages::init();
 	RP\Park_Admin::init();
+	RP\Photo_Admin::init();
+	RP\Contest_Admin::init();
+	RP\Tools_Admin::init();
 	RP\Draw::init();
 	RP\Tables::maybe_upgrade();
 } );

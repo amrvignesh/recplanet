@@ -414,6 +414,7 @@ class Rewrites {
 			$to = self::old_path_guess( $path );
 		}
 		if ( '' === $to ) {
+			Tools_Admin::log_miss( $path );
 			return;
 		}
 		wp_redirect( home_url( self::canonical_path( $to ) ), 301 );

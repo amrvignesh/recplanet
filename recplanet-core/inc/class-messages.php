@@ -135,7 +135,10 @@ class Messages {
 	public static function widget(): void {
 		$m = self::unread( 'message' );
 		$c = self::unread( 'correction' );
+		$p = Photo_Admin::pending();
+		$s = Tools_Admin::suggestion_count();
 		echo '<p><a href="' . esc_url( admin_url( 'admin.php?page=rp-inbox' ) ) . '"><strong>' . (int) $m . '</strong> unread ' . ( 1 === $m ? 'message' : 'messages' ) . '</a> &nbsp;·&nbsp; <a href="' . esc_url( admin_url( 'admin.php?page=rp-corrections' ) ) . '"><strong>' . (int) $c . '</strong> unread ' . ( 1 === $c ? 'correction' : 'corrections' ) . '</a></p>';
+		echo '<p><a href="' . esc_url( admin_url( 'edit.php?post_status=pending&post_type=' . POST_PHOTO ) ) . '"><strong>' . (int) $p . '</strong> ' . ( 1 === $p ? 'photo' : 'photos' ) . ' awaiting approval</a> &nbsp;·&nbsp; <a href="' . esc_url( admin_url( 'edit.php?post_type=' . POST_PARK . '&page=rp-suggestions' ) ) . '"><strong>' . (int) $s . '</strong> parks with activity suggestions</a></p>';
 		global $wpdb;
 		$latest = $wpdb->get_results( "SELECT name, subject, created_at FROM " . table( 'messages' ) . " ORDER BY id DESC LIMIT 5" );
 		if ( $latest ) {
