@@ -174,8 +174,9 @@ class Park_Admin {
 		$out   = [ 'us' => 'United States' ];
 		$terms = get_terms( [ 'taxonomy' => TAX_PLACE, 'hide_empty' => false, 'parent' => 0, 'meta_key' => 'rp_level', 'meta_value' => 'country', 'orderby' => 'name' ] );
 		foreach ( is_array( $terms ) ? $terms : [] as $t ) {
-			if ( 'us' !== $t->slug ) {
-				$out[ $t->slug ] = $t->name;
+			$code = strtolower( (string) get_term_meta( $t->term_id, 'rp_code', true ) ) ?: $t->slug;
+			if ( 'us' !== $code && ! isset( $out[ $code ] ) ) {
+				$out[ $code ] = $t->name;
 			}
 		}
 		return $out;

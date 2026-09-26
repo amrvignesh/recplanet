@@ -74,6 +74,7 @@ class Import_Command {
 			case 'blogs':     $this->blogs( $assoc ); break;
 			case 'redirects': $this->redirects( $assoc ); break;
 			case 'parkpaths': $this->parkpaths(); break;
+			case 'alts':      $this->alts(); break;
 			default: WP_CLI::error( 'Say what to import: parks, photos, blogs, redirects or parkpaths.' );
 		}
 		WP_CLI::success( wp_json_encode( $this->stats ) );
@@ -312,6 +313,7 @@ class Import_Command {
 		$att = media_handle_sideload( [ 'name' => basename( $path ), 'tmp_name' => $tmp ], $post_id );
 		if ( ! is_wp_error( $att ) ) {
 			set_post_thumbnail( $post_id, $att );
+			update_post_meta( $att, '_wp_attachment_image_alt', get_the_title( $post_id ) );
 			$this->stats['images'] = ( $this->stats['images'] ?? 0 ) + 1;
 		}
 	}
@@ -452,6 +454,19 @@ class Import_Command {
 			}
 			Rewrites::add_redirect( $r->dst, $target, 'node' );
 			$this->stats['node_redirects'] = ( $this->stats['node_redirects'] ?? 0 ) + 1;
+		}
+	}
+
+	/** Alt text for every featured image that has none: the park's or photo's title. */
+	private function alts(): void {
+		global $wpdb;
+		$rows = $wpdb->get_results( "SELECT m.post_id, m.meta_value AS att FROM {$wpdb->postmeta} m WHERE m.meta_key = '_thumbnail_id' AND NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} a WHERE a.post_id = m.meta_value AND a.meta_key = '_wp_attachment_image_alt' AND a.meta_value <> '')" );
+		foreach ( $rows as $r ) {
+			$title = get_the_title( (int) $r->post_id );
+			if ( '' !== $title ) {
+				update_post_meta( (int) $r->att, '_wp_attachment_image_alt', $title );
+				$this->stats['alts_set'] = ( $this->stats['alts_set'] ?? 0 ) + 1;
+			}
 		}
 	}
 
@@ -665,6 +680,30 @@ class Import_Command {
 	}
 
 	/** Rebuild the index and every roll-up from scratch. */
+	/** Same name under the same parent = the same place. The oldest term stays; children and parks move to it. */
+	private function merge_duplicate_places(): int {
+		global $wpdb;
+		$merged = 0;
+		foreach ( [ 'country', 'state', 'county', 'city' ] as $level ) {
+			$groups = $wpdb->get_results( $wpdb->prepare( "SELECT t.name, tt.parent, GROUP_CONCAT(t.term_id ORDER BY t.term_id) AS ids FROM {$wpdb->terms} t JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id JOIN {$wpdb->termmeta} m ON m.term_id = t.term_id AND m.meta_key = 'rp_level' AND m.meta_value = %s WHERE tt.taxonomy = %s GROUP BY t.name, tt.parent HAVING COUNT(*) > 1", $level, TAX_PLACE ) );
+			foreach ( $groups as $g ) {
+				$ids    = array_map( 'intval', explode( ',', $g->ids ) );
+				$keep   = array_shift( $ids );
+				$keep_tt = (int) $wpdb->get_var( $wpdb->prepare( "SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE term_id = %d AND taxonomy = %s", $keep, TAX_PLACE ) );
+				foreach ( $ids as $dup ) {
+					$dup_tt = (int) $wpdb->get_var( $wpdb->prepare( "SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE term_id = %d AND taxonomy = %s", $dup, TAX_PLACE ) );
+					$wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->term_taxonomy} SET parent = %d WHERE parent = %d AND taxonomy = %s", $keep, $dup, TAX_PLACE ) );
+					$wpdb->query( $wpdb->prepare( "UPDATE IGNORE {$wpdb->term_relationships} SET term_taxonomy_id = %d WHERE term_taxonomy_id = %d", $keep_tt, $dup_tt ) );
+					$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id = %d", $dup_tt ) );
+					wp_delete_term( $dup, TAX_PLACE );
+					$merged++;
+				}
+				clean_term_cache( $keep, TAX_PLACE );
+			}
+		}
+		return $merged;
+	}
+
 	/**
 	 * Put every park on its city (or county, or state) term and give every place its URL segment.
 	 * Repairs imports made while duplicate city names stopped term creation.
@@ -678,15 +717,26 @@ class Import_Command {
 		global $wpdb;
 		wp_suspend_cache_addition( true );
 		wp_defer_term_counting( true );
+		// 0. Merge duplicate places: a slug lookup once missed "Canada" (slug ca-2, California having taken ca) and made a new one each time.
+		$merged = $this->merge_duplicate_places();
+		WP_CLI::log( "$merged duplicate place terms merged." );
 		// 1. URL segments for existing place terms.
 		$terms = get_terms( [ 'taxonomy' => TAX_PLACE, 'hide_empty' => false, 'fields' => 'all' ] );
 		$slugged = 0;
 		foreach ( $terms as $t ) {
 			$level = get_term_meta( $t->term_id, 'rp_level', true );
-			$slug  = 'country' === $level ? $t->slug : ( 'state' === $level ? $t->slug : legacy_slug( $t->name ) );
+			$slug  = in_array( $level, [ 'country', 'state' ], true ) ? ( strtolower( (string) get_term_meta( $t->term_id, 'rp_code', true ) ) ?: $t->slug ) : legacy_slug( $t->name );
 			if ( (string) get_term_meta( $t->term_id, 'rp_slug', true ) !== $slug ) {
 				update_term_meta( $t->term_id, 'rp_slug', $slug );
 				$slugged++;
+			}
+			// Countries and regions named by their code get their name (BC -> British Columbia).
+			if ( in_array( $level, [ 'country', 'state' ], true ) ) {
+				$code = (string) get_term_meta( $t->term_id, 'rp_code', true );
+				$name = 'country' === $level ? country_name( $code ) : region_name( (string) get_term_meta( $t->parent, 'rp_code', true ), $code );
+				if ( '' !== $code && $name !== $t->name && strtoupper( $t->name ) === strtoupper( $code ) ) {
+					wp_update_term( $t->term_id, TAX_PLACE, [ 'name' => $name ] );
+				}
 			}
 		}
 		WP_CLI::log( count( $terms ) . " place terms, $slugged given a URL segment." );

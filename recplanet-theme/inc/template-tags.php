@@ -28,8 +28,8 @@ function rp_park_place_line( int $id ): string {
 	$city    = get_post_meta( $id, 'rp_city', true );
 	$state   = get_post_meta( $id, 'rp_state', true );
 	$country = get_post_meta( $id, 'rp_country', true ) ?: 'us';
-	$sn      = 'us' === $country ? ( RP\us_states()[ $state ] ?? $state ) : $state;
-	$parts   = array_filter( [ $city, $sn, 'us' === $country ? '' : strtoupper( $country ) ] );
+	$sn      = RP\region_name( $country, (string) $state );
+	$parts   = array_filter( [ $city, $sn, 'us' === $country ? '' : RP\country_name( $country ) ] );
 	return implode( ', ', $parts );
 }
 

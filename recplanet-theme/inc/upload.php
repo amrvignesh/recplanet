@@ -102,6 +102,7 @@ function rp_handle_upload(): void {
 		exit;
 	}
 	set_post_thumbnail( $photo_id, $att );
+	update_post_meta( $att, '_wp_attachment_image_alt', $title );
 	if ( $tags ) {
 		wp_set_post_tags( $photo_id, array_slice( array_values( $tags ), 0, 10 ) );
 	}

@@ -58,6 +58,26 @@ function legacy_slug( ?string $text ): string {
 	return trim( $text, '-' );
 }
 
+/** Country code to name, for the few countries the database reaches beyond the US. */
+function country_name( string $code ): string {
+	$names = [ 'us' => 'United States', 'ca' => 'Canada', 'mx' => 'Mexico', 'es' => 'Spain', 'uk' => 'United Kingdom', 'gb' => 'United Kingdom', 'in' => 'India', 'br' => 'Brazil', 'cn' => 'China', 'za' => 'South Africa', 'au' => 'Australia', 'cr' => 'Costa Rica', 'aq' => 'Antarctica', 'gl' => 'Greenland', 'nz' => 'New Zealand', 'fr' => 'France', 'de' => 'Germany', 'it' => 'Italy', 'jp' => 'Japan', 'ie' => 'Ireland', 'nl' => 'Netherlands', 'ch' => 'Switzerland', 'at' => 'Austria', 'no' => 'Norway', 'se' => 'Sweden', 'fi' => 'Finland', 'dk' => 'Denmark', 'pt' => 'Portugal', 'ar' => 'Argentina', 'cl' => 'Chile', 'pe' => 'Peru', 'co' => 'Colombia', 'ec' => 'Ecuador', 'pa' => 'Panama', 'bz' => 'Belize', 'gt' => 'Guatemala', 'ke' => 'Kenya', 'tz' => 'Tanzania', 'bw' => 'Botswana', 'na' => 'Namibia', 'zm' => 'Zambia', 'zw' => 'Zimbabwe', 'ug' => 'Uganda', 'eg' => 'Egypt', 'ma' => 'Morocco', 'th' => 'Thailand', 'np' => 'Nepal', 'id' => 'Indonesia', 'my' => 'Malaysia', 'sg' => 'Singapore', 'ph' => 'Philippines', 'kr' => 'South Korea', 'ru' => 'Russia', 'pl' => 'Poland', 'cz' => 'Czechia', 'gr' => 'Greece', 'hr' => 'Croatia', 'is' => 'Iceland', 'tr' => 'Turkey', 'il' => 'Israel', 'jo' => 'Jordan', 'ae' => 'United Arab Emirates', 'bs' => 'Bahamas', 'jm' => 'Jamaica', 'cu' => 'Cuba', 'do' => 'Dominican Republic', 'pr' => 'Puerto Rico', 'vi' => 'US Virgin Islands', 'bm' => 'Bermuda', 'fj' => 'Fiji', 've' => 'Venezuela', 'bo' => 'Bolivia', 'uy' => 'Uruguay', 'py' => 'Paraguay' ];
+	return $names[ strtolower( $code ) ] ?? strtoupper( $code );
+}
+
+/** Province, state or region name for a code outside the US; the code itself when unknown. */
+function region_name( string $country, string $code ): string {
+	$country = strtolower( $country );
+	$code    = strtoupper( $code );
+	if ( 'us' === $country ) {
+		return us_states()[ $code ] ?? $code;
+	}
+	$maps = [
+		'ca' => [ 'AB' => 'Alberta', 'BC' => 'British Columbia', 'MB' => 'Manitoba', 'NB' => 'New Brunswick', 'NL' => 'Newfoundland and Labrador', 'NS' => 'Nova Scotia', 'NT' => 'Northwest Territories', 'NU' => 'Nunavut', 'ON' => 'Ontario', 'PE' => 'Prince Edward Island', 'QC' => 'Quebec', 'SK' => 'Saskatchewan', 'YT' => 'Yukon' ],
+		'au' => [ 'NSW' => 'New South Wales', 'VIC' => 'Victoria', 'QLD' => 'Queensland', 'SA' => 'South Australia', 'WA' => 'Western Australia', 'TAS' => 'Tasmania', 'NT' => 'Northern Territory', 'ACT' => 'Australian Capital Territory' ],
+	];
+	return $maps[ $country ][ $code ] ?? $code;
+}
+
 /** US state code to name; also used to parse the old Park Tags. */
 function us_states(): array {
 	return [

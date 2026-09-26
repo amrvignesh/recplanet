@@ -166,15 +166,11 @@ class Taxonomies {
 	}
 
 	private static function country_name( string $code ): string {
-		$names = [ 'us' => 'United States', 'ca' => 'Canada', 'mx' => 'Mexico', 'es' => 'Spain', 'uk' => 'United Kingdom', 'in' => 'India', 'br' => 'Brazil', 'cn' => 'China', 'za' => 'South Africa', 'au' => 'Australia', 'cr' => 'Costa Rica', 'aq' => 'Antarctica', 'gl' => 'Greenland' ];
-		return $names[ strtolower( $code ) ] ?? strtoupper( $code );
+		return \RP\country_name( $code );
 	}
 
 	private static function state_name( string $country, string $state ): string {
-		if ( 'us' === strtolower( $country ) ) {
-			return us_states()[ strtoupper( $state ) ] ?? $state;
-		}
-		return $state;
+		return region_name( $country, $state );
 	}
 
 	private static function labels( string $s, string $p ): array {

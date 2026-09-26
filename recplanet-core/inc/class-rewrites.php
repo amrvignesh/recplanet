@@ -24,12 +24,18 @@ class Rewrites {
 		add_action( 'pre_get_posts', [ __CLASS__, 'resolve' ] );
 		add_action( 'template_redirect', [ __CLASS__, 'legacy_redirect' ], 1 );
 		add_action( 'template_redirect', [ __CLASS__, 'random_park' ], 0 );
+		add_filter( 'redirect_canonical', [ __CLASS__, 'canonical' ], 10, 2 );
+		add_action( 'template_redirect', [ __CLASS__, 'park_slash' ], 2 );
+		add_filter( 'wp_sitemaps_add_provider', fn( $p, $name ) => 'users' === $name ? false : $p, 10, 2 );
+		add_filter( 'wp_sitemaps_taxonomies', fn( $t ) => array_intersect_key( $t, array_flip( [ TAX_PLACE, TAX_ACTIVITY, TAX_FACILITY, 'post_tag' ] ) ) );
+		add_filter( 'wp_sitemaps_post_types', fn( $t ) => array_intersect_key( $t, array_flip( [ POST_PARK, POST_PHOTO, POST_CONTEST, 'post', 'page' ] ) ) );
 	}
 
 	public static function rules(): void {
 		$st = '([a-z]{2})';
 		// Pagination first, so "page" is never read as a city.
 		add_rewrite_rule( "^world/([a-z]{2})/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country&paged=$matches[2]', 'top' );
+		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_state=$matches[2]&rp_place_level=state&paged=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_filter=$matches[3]&rp_place_level=city&paged=$matches[4]', 'top' );
 		add_rewrite_rule( "^$st/county/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county&paged=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city&paged=$matches[3]', 'top' );
@@ -40,6 +46,37 @@ class Rewrites {
 		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/?$", 'index.php?post_type=' . POST_PARK . '&rp_state=$matches[1]&rp_city=$matches[2]&name=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city', 'top' );
 		add_rewrite_rule( "^$st/?$", 'index.php?rp_state=$matches[1]&rp_place_level=state', 'top' );
+	}
+
+	/**
+	 * Core would add a trailing slash to every park URL and so bounce every old inbound link through a 301.
+	 * For a park, the only canonical redirect is the reverse: the slash form goes to the exact old address.
+	 */
+	public static function canonical( $redirect_url, string $requested_url ) {
+		if ( ! is_singular( POST_PARK ) ) {
+			return $redirect_url;
+		}
+		$permalink = get_permalink();
+		$requested = strtok( $requested_url, '?' );
+		if ( untrailingslashit( $requested ) === untrailingslashit( $permalink ) ) {
+			return $requested === $permalink ? false : $permalink;
+		}
+		return $permalink;
+	}
+
+	/** A park requested with a trailing slash goes, once, to its exact address. Core leaves the slash form alone. */
+	public static function park_slash(): void {
+		if ( ! is_singular( POST_PARK ) || is_preview() ) {
+			return;
+		}
+		$uri  = (string) ( $_SERVER['REQUEST_URI'] ?? '' );
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
+		if ( '/' !== substr( $path, -1 ) || '/' === $path ) {
+			return;
+		}
+		$query = (string) wp_parse_url( $uri, PHP_URL_QUERY );
+		wp_redirect( get_permalink() . ( '' !== $query ? '?' . $query : '' ), 301 );
+		exit;
 	}
 
 	/** Build a park's URL from its place meta. */
@@ -53,16 +90,17 @@ class Rewrites {
 		// The old site's own path, kept exactly, when it starts with the state (the city segment may differ from today's name: bronx, the-bronx). Slugs that WordPress had
 		// to make unique (hillside-park-10) never reach the address bar; the old path is the canonical URL.
 		$legacy = (string) get_post_meta( $post->ID, 'rp_legacy_path', true );
+		// Park URLs carry no trailing slash: that is how the old site printed them, and how every inbound link is written.
 		if ( 'us' === $country && $state && '' !== $legacy && preg_match( '#^' . preg_quote( $state, '#' ) . '/(?:[^/]+/)?[^/]+$#', $legacy ) && ! preg_match( '#/(page|county)/#', '/' . $legacy . '/' ) ) {
-			return user_trailingslashit( home_url( '/' . $legacy ) );
+			return home_url( '/' . $legacy );
 		}
 		if ( 'us' === $country && $state && $city ) {
-			return user_trailingslashit( home_url( "/$state/$city/{$post->post_name}" ) );
+			return home_url( "/$state/$city/{$post->post_name}" );
 		}
 		if ( 'us' === $country && $state ) {
-			return user_trailingslashit( home_url( "/$state/{$post->post_name}" ) );        // no city on record; handled by the city rule with an empty-city fallback
+			return home_url( "/$state/{$post->post_name}" );        // no city on record; handled by the city rule with an empty-city fallback
 		}
-		return user_trailingslashit( home_url( "/world/$country/{$post->post_name}" ) );
+		return home_url( "/world/$country/{$post->post_name}" );
 	}
 
 	/** Place terms get the same short URLs. */
@@ -77,16 +115,17 @@ class Rewrites {
 			$t       = $t->parent ? get_term( $t->parent, TAX_PLACE ) : null;
 		}
 		$chain   = array_reverse( $chain );                      // country, state, county, city
-		$country = $chain[0]->slug;
+		$country = self::url_slug( $chain[0] );
 		$level   = get_term_meta( $term->term_id, 'rp_level', true );
 		if ( 'us' !== $country ) {
-			return user_trailingslashit( home_url( '/world/' . $country . ( isset( $chain[1] ) ? '/' . $chain[1]->slug : '' ) ) );
+			return user_trailingslashit( home_url( '/world/' . $country . ( isset( $chain[1] ) ? '/' . self::url_slug( $chain[1] ) : '' ) ) );
 		}
+		$state = isset( $chain[1] ) ? self::url_slug( $chain[1] ) : '';
 		switch ( $level ) {
 			case 'country': return home_url( '/' );
-			case 'state':   return user_trailingslashit( home_url( '/' . $chain[1]->slug ) );
-			case 'county':  return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/county/' . self::url_slug( $term ) ) );
-			case 'city':    return user_trailingslashit( home_url( '/' . $chain[1]->slug . '/' . self::url_slug( $term ) ) );
+			case 'state':   return user_trailingslashit( home_url( '/' . $state ) );
+			case 'county':  return user_trailingslashit( home_url( '/' . $state . '/county/' . self::url_slug( $term ) ) );
+			case 'city':    return user_trailingslashit( home_url( '/' . $state . '/' . self::url_slug( $term ) ) );
 		}
 		return $link;
 	}
@@ -158,6 +197,15 @@ class Rewrites {
 					}
 				}
 			}
+			if ( $q->get( 'rp_country' ) && ! $q->get( 'rp_state' ) && ! self::park_exists_in( (string) $q->get( 'name' ), 'rp_country', strtolower( (string) $q->get( 'rp_country' ) ) ) ) {
+				// /world/{country}/{province}: a province or region page.
+				$term = self::find_place( 'state', strtolower( (string) $q->get( 'rp_country' ) ), (string) $q->get( 'name' ), '', '' );
+				if ( $term ) {
+					$q->set( 'name', '' );
+					self::place_archive( $q, $term, null );
+					return;
+				}
+			}
 			// Park with the same slug in two cities: pin it to the place in the URL.
 			$meta = [ 'relation' => 'AND' ];
 			if ( $q->get( 'rp_state' ) ) {
@@ -212,8 +260,12 @@ class Rewrites {
 	}
 
 	private static function park_exists( string $slug, string $state ): bool {
+		return self::park_exists_in( $slug, 'rp_state', strtoupper( $state ) );
+	}
+
+	private static function park_exists_in( string $slug, string $meta_key, string $value ): bool {
 		global $wpdb;
-		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = 'rp_state' WHERE p.post_name = %s AND p.post_type = %s AND p.post_status = 'publish' AND m.meta_value = %s LIMIT 1", $slug, POST_PARK, strtoupper( $state ) ) );
+		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s WHERE p.post_name = %s AND p.post_type = %s AND p.post_status = 'publish' AND m.meta_value = %s LIMIT 1", $meta_key, $slug, POST_PARK, $value ) );
 	}
 
 	/** A real 404: no posts at all, so WordPress sends a 404 status rather than a 200 with the 404 template. */
@@ -236,14 +288,27 @@ class Rewrites {
 	}
 
 	public static function find_place( string $level, string $country, string $state, string $county, string $city ): ?\WP_Term {
-		$parent = self::term_by_slug( $country, 0 );
+		// Country and state by their URL segment (the code): the term slug may be ca-2 when California took "ca".
+		$parent = null;
+		foreach ( self::terms_by_url_slug( strtolower( $country ) ) as $t ) {
+			if ( 0 === $t->parent ) {
+				$parent = $t;
+				break;
+			}
+		}
 		if ( ! $parent ) {
 			return null;
 		}
 		if ( 'country' === $level ) {
 			return $parent;
 		}
-		$st = self::term_by_slug( strtolower( $state ), $parent->term_id );
+		$st = null;
+		foreach ( self::terms_by_url_slug( strtolower( $state ) ) as $t ) {
+			if ( $t->parent === $parent->term_id ) {
+				$st = $t;
+				break;
+			}
+		}
 		if ( ! $st ) {
 			return null;
 		}
@@ -274,7 +339,14 @@ class Rewrites {
 	/** The segment a place uses in URLs: the slug of its name, kept in meta because term slugs are unique site-wide. */
 	public static function url_slug( \WP_Term $term ): string {
 		$s = (string) get_term_meta( $term->term_id, 'rp_slug', true );
-		return '' !== $s ? $s : legacy_slug( $term->name );
+		if ( '' !== $s ) {
+			return $s;
+		}
+		$level = get_term_meta( $term->term_id, 'rp_level', true );
+		if ( 'country' === $level || 'state' === $level ) {
+			return strtolower( (string) get_term_meta( $term->term_id, 'rp_code', true ) ) ?: $term->slug;
+		}
+		return legacy_slug( $term->name );
 	}
 
 	/** Every place term whose URL segment is this (Springfield exists in many states). */
@@ -344,8 +416,20 @@ class Rewrites {
 		if ( '' === $to ) {
 			return;
 		}
-		wp_redirect( home_url( $to ), 301 );
+		wp_redirect( home_url( self::canonical_path( $to ) ), 301 );
 		exit;
+	}
+
+	/** One hop only: a park path has no trailing slash, a search keeps its query, every other page ends with a slash. */
+	public static function canonical_path( string $to ): string {
+		if ( str_starts_with( $to, '/?' ) || str_contains( $to, '.xml' ) || '/' === $to ) {
+			return $to;
+		}
+		$bare = trim( $to, '/' );
+		if ( self::park_by_path( $bare ) ) {
+			return '/' . $bare;
+		}
+		return '/' . $bare . '/';
 	}
 
 	/** /node/N by the Drupal node id kept on every imported park, photo and post. */

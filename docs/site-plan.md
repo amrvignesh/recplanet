@@ -140,6 +140,18 @@ WordPress.com has no server-level redirect map, so the plugin resolves redirects
 
 67,000 parks plus tens of thousands of place and facility pages need a sitemap index; WordPress core caps each sitemap file at 2,000 URLs and handles the index. Today only 5,178 URLs are in the sitemap. This alone should be the largest search-traffic change of the project.
 
+### SEO: how every old address survives, and what improves (decided 26 September 2026)
+
+1. Park URLs are character-for-character the old ones, with no trailing slash, because that is how every inbound link was written. Requests with a slash 301 to the exact address; core's own canonical redirect is switched off for parks so it cannot bounce old links the other way.
+2. Every other old address 301s in one hop to the canonical form of its target: place and facility pages end with a slash, parks do not, searches keep their query. Redirect targets are normalised at redirect time so no chain forms.
+3. Missing pages send a real 404. Thin place pages (fewer than three parks) carry noindex. Sort and page parameters point their canonical at the base page.
+4. Duplicate place terms are merged (same name under the same parent is one place; the oldest term stays, children and parks move to it), so one city has one page and one set of links. Country and state URL segments come from the code in term meta, never from a slug that WordPress had to make unique.
+5. Sitemaps: WordPress core sitemaps (Jetpack's module is switched off because it omits custom post types and taxonomy pages), listing parks, photos, contests, posts, pages, places, activities, facilities and tags, never users.
+6. Every featured image carries alt text (the park's or photo's title); the importer and the member upload set it, `wp recplanet import alts` backfills.
+7. Titles carry the figures people search for (state and city counts, acres), descriptions come from the old meta description where there was one, BreadcrumbList, ItemList, WebSite and Organization schema are emitted, and the web fonts and logo no longer block the first paint.
+
+Launch checklist on production: search-engine visibility on, robots.txt allowing, `/wp-sitemap.xml` submitted in Search Console, the Google Maps key restricted to the production referrer, then the sequence `places`, `rebuild`, `import redirects`, `import parkpaths`, `import alts` after the final park import.
+
 ## 5. Members, photos and the contest
 
 Clarified 23 September 2026: the contest is for recreational photos of any subject (the old entries were sunsets, waterfalls, birds, an outhouse), taken in a park or other recreational area as the old rules say; naming the park is optional. Separately, a member can add a photo of a specific park from that park's page, and may tick to enter it in the contest too. Entries carry a title, a few words, and free tags (the old Contest Tags: Florida, water, sunset).
