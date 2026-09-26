@@ -25,8 +25,8 @@ if ( 'rp_activity' === $tax ) {
 	$title = ucfirst( $t->name );
 }
 $stats  = rp_index_sum( $where, $args );
-$sort   = sanitize_key( $_GET['sort'] ?? 'acres' );
-$order  = 'name' === $sort ? 'title ASC' : ( 'city' === $sort ? 'state ASC, city ASC' : 'acres DESC' );
+$sort   = sanitize_key( $_GET['sort'] ?? 'name' );
+$order  = 'acres' === $sort ? 'acres DESC' : ( 'city' === $sort ? 'state ASC, city ASC' : 'title ASC' );
 $paged  = max( 1, (int) get_query_var( 'paged' ) );
 $per    = 50;
 $rows   = rp_index_rows( $where, $args, $order, $per, ( $paged - 1 ) * $per );
@@ -54,7 +54,7 @@ $states = $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n FROM $id
   <section class="two" style="padding-top:10px">
     <div>
       <div class="sortbar"><span class="lbl">Sort by</span>
-        <?php foreach ( [ 'acres' => 'Acres', 'name' => 'Name', 'city' => 'Place' ] as $k => $lbl ) : ?><a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', $k, get_term_link( $t ) ) ); ?>"><?php echo esc_html( $lbl ); ?></a><?php endforeach; ?>
+        <?php foreach ( [ 'name' => 'Name', 'acres' => 'Acres', 'city' => 'Place' ] as $k => $lbl ) : ?><a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( 'name' === $k ? get_term_link( $t ) : add_query_arg( 'sort', $k, get_term_link( $t ) ) ); ?>"><?php echo esc_html( $lbl ); ?></a><?php endforeach; ?>
       </div>
       <div class="plist"><div class="phd"><span>Place</span><span>Activities</span><span style="text-align:right">Acres</span></div><?php foreach ( $rows as $r ) { echo rp_park_row( $r ); } ?></div>
       <?php $pages = (int) ceil( $stats['count'] / $per ); if ( $pages > 1 ) : ?>

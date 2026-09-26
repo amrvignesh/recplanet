@@ -110,8 +110,8 @@ add_action( 'pre_get_posts', function ( WP_Query $q ) {
 	if ( $q->is_tax( [ 'rp_activity', 'rp_facility', 'rp_steward' ] ) ) {
 		$q->set( 'post_type', 'rp_park' );
 		$q->set( 'posts_per_page', 50 );
-		$sort = sanitize_key( $_GET['sort'] ?? 'acres' );
-		if ( 'name' === $sort ) {
+		$sort = sanitize_key( $_GET['sort'] ?? 'name' );
+		if ( 'acres' !== $sort ) {
 			$q->set( 'orderby', 'title' );
 			$q->set( 'order', 'ASC' );
 		} else {
@@ -120,7 +120,7 @@ add_action( 'pre_get_posts', function ( WP_Query $q ) {
 			$q->set( 'order', 'DESC' );
 		}
 	}
-	if ( $q->is_tax( 'rp_place' ) && 'name' === sanitize_key( $_GET['sort'] ?? '' ) ) {
+	if ( $q->is_tax( 'rp_place' ) && 'acres' !== sanitize_key( $_GET['sort'] ?? 'name' ) ) {
 		$q->set( 'orderby', 'title' );
 		$q->set( 'order', 'ASC' );
 		$q->set( 'meta_key', '' );

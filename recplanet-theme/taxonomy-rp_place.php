@@ -9,8 +9,8 @@ $stats  = rp_place_stats( $t, $filter );
 [ $where, $args ] = rp_place_where( $t, $filter );
 $acts    = rp_index_activities( $where, $args );
 $largest = rp_index_rows( $where, $args, 'acres DESC', 1 );
-$sort    = sanitize_key( $_GET['sort'] ?? 'acres' );
-$order   = 'name' === $sort ? 'title ASC' : ( 'checked' === $sort ? 'post_id DESC' : 'acres DESC' );
+$sort    = sanitize_key( $_GET['sort'] ?? 'name' );
+$order   = 'acres' === $sort ? 'acres DESC' : ( 'checked' === $sort ? 'post_id DESC' : 'title ASC' );
 $paged   = max( 1, (int) get_query_var( 'paged' ) );
 $per     = 50;
 $rows    = rp_index_rows( $where, $args, $order, $per, ( $paged - 1 ) * $per );
@@ -55,8 +55,8 @@ $lead    = sprintf( '%s %s across %s acres%s. %s',
   <section class="two" style="padding-top:34px">
     <div>
       <div class="sortbar"><span class="lbl">Sort by</span>
-        <?php foreach ( [ 'acres' => 'Acres', 'name' => 'Name', 'checked' => 'Recently added' ] as $k => $lbl ) : ?>
-          <a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', $k, $base ) ); ?>"><?php echo esc_html( $lbl ); ?></a>
+        <?php foreach ( [ 'name' => 'Name', 'acres' => 'Acres', 'checked' => 'Recently added' ] as $k => $lbl ) : ?>
+          <a class="<?php echo $sort === $k ? 'on' : ''; ?>" href="<?php echo esc_url( 'name' === $k ? $base : add_query_arg( 'sort', $k, $base ) ); ?>"><?php echo esc_html( $lbl ); ?></a>
         <?php endforeach; ?>
       </div>
       <div class="plist">

@@ -222,7 +222,7 @@ function rp_activity_verb( string $name ): string {
 }
 
 /** /tx/page/2/?sort=name style pagination links. */
-function rp_page_link( string $base, int $page, string $sort = 'acres' ): string {
+function rp_page_link( string $base, int $page, string $sort = 'name' ): string {
 	$url = trailingslashit( $base ) . ( $page > 1 ? 'page/' . $page . '/' : '' );
-	return 'acres' === $sort || '' === $sort ? $url : add_query_arg( 'sort', $sort, $url );
+	return 'name' === $sort || '' === $sort ? $url : add_query_arg( 'sort', $sort, $url );
 }
