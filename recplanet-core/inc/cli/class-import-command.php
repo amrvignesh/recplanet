@@ -5,6 +5,7 @@ use RP\Counter;
 use RP\Index;
 use RP\Rewrites;
 use RP\Taxonomies;
+use RP\Votes;
 use WP_CLI;
 use function RP\legacy_slug;
 use function RP\table;
@@ -75,7 +76,8 @@ class Import_Command {
 			case 'redirects': $this->redirects( $assoc ); break;
 			case 'parkpaths': $this->parkpaths(); break;
 			case 'alts':      $this->alts(); break;
-			default: WP_CLI::error( 'Say what to import: parks, photos, blogs, redirects or parkpaths.' );
+			case 'votes':     $this->votes(); break;
+			default: WP_CLI::error( 'Say what to import: parks, photos, blogs, redirects, parkpaths, alts or votes.' );
 		}
 		WP_CLI::success( wp_json_encode( $this->stats ) );
 	}
@@ -455,6 +457,44 @@ class Import_Command {
 			Rewrites::add_redirect( $r->dst, $target, 'node' );
 			$this->stats['node_redirects'] = ( $this->stats['node_redirects'] ?? 0 ) + 1;
 		}
+	}
+
+	/**
+	 * Every old vote as a row of its own, with the address it came from: the totals stay what they were, each photo's
+	 * voters keep their numbers, and an address that voted on the old site cannot vote on the same photo again.
+	 * Replaces the frozen per-photo totals (rp_legacy_votes, rp_legacy_score). Safe to run again.
+	 */
+	private function votes(): void {
+		global $wpdb;
+		$t   = table( 'votes' );
+		$map = [];
+		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT m.post_id, m.meta_value AS nid FROM {$wpdb->postmeta} m JOIN {$wpdb->posts} p ON p.ID = m.post_id AND p.post_type = %s WHERE m.meta_key = 'rp_legacy_nid'", POST_PHOTO ) ) as $r ) {
+			$map[ (int) $r->nid ] = (int) $r->post_id;
+		}
+		$wpdb->query( "DELETE FROM $t WHERE legacy = 1" );
+		$rows = $wpdb->get_results( "SELECT vote_id, content_id, value, uid, timestamp, vote_source FROM {$this->t('votingapi_vote')} WHERE content_type = 'node' ORDER BY content_id, timestamp, vote_id" );
+		$seq  = [];
+		foreach ( $rows as $v ) {
+			$photo = $map[ (int) $v->content_id ] ?? 0;
+			if ( ! $photo ) {
+				$this->stats['votes_without_photo'] = ( $this->stats['votes_without_photo'] ?? 0 ) + 1;
+				continue;
+			}
+			$seq[ $photo ] = ( $seq[ $photo ] ?? 0 ) + 1;
+			$ip            = filter_var( trim( (string) $v->vote_source ), FILTER_VALIDATE_IP ) ? trim( (string) $v->vote_source ) : '';
+			$wpdb->insert( $t, [
+				'photo_id' => $photo, 'user_id' => 0, 'voter_hash' => sha1( 'legacy|' . $v->vote_id ), 'value' => max( 1, min( 5, (int) round( (float) $v->value / 20 ) ) ),
+				'voter_no' => $seq[ $photo ], 'ip' => $ip, 'ip_key' => Votes::ip_key( $ip ), 'legacy' => 1, 'created_at' => gmdate( 'Y-m-d H:i:s', (int) $v->timestamp ),
+			] );
+			$this->stats['votes'] = ( $this->stats['votes'] ?? 0 ) + 1;
+		}
+		foreach ( array_keys( $seq ) as $photo ) {
+			delete_post_meta( $photo, 'rp_legacy_votes' );
+			delete_post_meta( $photo, 'rp_legacy_score' );
+			Votes::refresh( $photo );
+		}
+		$this->stats['photos_recounted'] = count( $seq );
+		$this->stats['stars_total']      = (int) $wpdb->get_var( "SELECT SUM(value) FROM $t" );
 	}
 
 	/** Alt text for every featured image that has none: the park's or photo's title. */

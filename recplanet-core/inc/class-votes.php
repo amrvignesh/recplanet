@@ -5,7 +5,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Star ratings on photos, as on the old site: one to five stars, open to anyone, one vote per photo per
- * connection (a member's vote is tied to the account instead). Rating is closed once the photo's contest has
+ * connection. Every vote is kept with its IP address; a connection is that address (the /64 for IPv6), whoever is
+ * signed in. Votes carried over from the old site are rows here too (legacy = 1) and count against their address. Rating is closed once the photo's contest has
  * closed voting.
  *
  * Two prizes ride on the ratings, both set on the contest:
@@ -29,10 +30,31 @@ class Votes {
 		} );
 	}
 
+	/**
+	 * The visitor's address as the server sees it. REMOTE_ADDR only: a forwarding header is something a visitor can
+	 * type, and on this host the platform already puts the true client address in REMOTE_ADDR.
+	 */
+	public static function client_ip(): string {
+		$ip = trim( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+		return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+	}
+
+	/** What counts as "one connection": an IPv4 address, or the /64 network of an IPv6 one (a home hands out a whole /64). */
+	public static function ip_key( string $ip ): string {
+		$ip = trim( $ip );
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return '';
+		}
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$bin = inet_pton( $ip );
+			return false === $bin ? $ip : inet_ntop( substr( $bin, 0, 8 ) . str_repeat( chr( 0 ), 8 ) ) . '/64';
+		}
+		return $ip;
+	}
+
+	/** One anonymous voter is one connection: the browser plays no part, so switching browsers is not a second vote. */
 	public static function voter_hash(): string {
-		$ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
-		$ip = trim( explode( ',', $ip )[0] );
-		return sha1( wp_salt( 'nonce' ) . '|' . $ip . '|' . ( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
+		return sha1( wp_salt( 'nonce' ) . '|' . self::ip_key( self::client_ip() ) );
 	}
 
 	/** The contest a photo is entered in, when that contest is still taking votes; 0 otherwise. */
@@ -97,8 +119,21 @@ class Votes {
 		}
 		$uid   = get_current_user_id();
 		$hash  = $uid ? '' : self::voter_hash();
+		$ip    = self::client_ip();
+		$key   = self::ip_key( $ip );
+		if ( '' === $key ) {
+			return new \WP_REST_Response( [ 'error' => 'Your vote could not be recorded from this connection.' ], 400 );
+		}
+		if ( in_array( $key, Votes_Admin::blocked(), true ) ) {
+			return new \WP_REST_Response( [ 'error' => 'Voting is not available from this connection.' ], 403 );
+		}
 		$had   = self::mine( $id );
 		$extra = [];
+		// One vote per connection per photo, as on the old site: a second account, a second browser, or a vote already
+		// cast there on the old site all count as the same connection.
+		if ( ! $had && $wpdb->get_var( $wpdb->prepare( "SELECT id FROM " . table( 'votes' ) . " WHERE photo_id = %d AND ip_key = %s LIMIT 1", $id, $key ) ) ) {
+			return new \WP_REST_Response( self::totals( $id ) + [ 'error' => 'A vote from your internet connection is already counted for this photo.', 'yours' => 0, 'voter_no' => 0 ], 409 );
+		}
 		if ( $had ) {
 			$wpdb->update( table( 'votes' ), [ 'value' => $stars, 'created_at' => current_time( 'mysql', true ) ], [ 'id' => $had->id ] );
 			$no = (int) $had->voter_no;
@@ -115,9 +150,9 @@ class Votes {
 				$no = 1 + (int) get_post_meta( $id, 'rp_legacy_votes', true ) + (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . table( 'votes' ) . " WHERE photo_id = %d", $id ) );
 			}
 			$wpdb->query( $wpdb->prepare(
-				"INSERT INTO " . table( 'votes' ) . " (photo_id, user_id, voter_hash, value, voter_no, created_at) VALUES (%d, %d, %s, %d, %d, %s)
+				"INSERT INTO " . table( 'votes' ) . " (photo_id, user_id, voter_hash, value, voter_no, ip, ip_key, created_at) VALUES (%d, %d, %s, %d, %d, %s, %s, %s)
 				 ON DUPLICATE KEY UPDATE value = VALUES(value), created_at = VALUES(created_at)",
-				$id, $uid, $hash, $stars, $no, current_time( 'mysql', true )
+				$id, $uid, $hash, $stars, $no, $ip, $key, current_time( 'mysql', true )
 			) );
 			if ( $locked ) {
 				$wpdb->query( "SELECT RELEASE_LOCK('rp_voter_no')" );

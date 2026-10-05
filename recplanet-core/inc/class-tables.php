@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Tables {
 
-	const SCHEMA_VERSION = 6;
+	const SCHEMA_VERSION = 7;
 
 	public static function install(): void {
 		global $wpdb;
@@ -69,10 +69,15 @@ class Tables {
 			voter_hash char(40) NOT NULL DEFAULT '',
 			value tinyint(4) NOT NULL DEFAULT 1,
 			voter_no int(10) unsigned NOT NULL DEFAULT 0,
+			ip varchar(45) NOT NULL DEFAULT '',
+			ip_key varchar(45) NOT NULL DEFAULT '',
+			legacy tinyint(1) NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY one_per_voter (photo_id,user_id,voter_hash),
-			KEY photo (photo_id)
+			KEY photo (photo_id),
+			KEY photo_ip (photo_id,ip_key),
+			KEY ip_time (ip_key,created_at)
 		) $charset;" );
 
 		dbDelta( "CREATE TABLE " . table( 'freshness' ) . " (
