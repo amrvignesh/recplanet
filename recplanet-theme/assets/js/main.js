@@ -334,44 +334,19 @@
     if (fh < 6 || fh >= 20) foot.classList.add('t-night'); else if (fh < 8) foot.classList.add('t-dawn'); else if (fh >= 17) foot.classList.add('t-dusk');
   }
   if (pano) {
-    var pCard = document.getElementById('panoCard'), pHiker = document.getElementById('panoHiker'), pTrail = document.getElementById('panoTrail');
-    var lms = Array.prototype.slice.call(pano.querySelectorAll('a.lm')), labels = pano.querySelectorAll('.labels text');
-    var touch = window.matchMedia && window.matchMedia('(hover: none)').matches, homeX = 720, hideT = null;
+    var pHiker = document.getElementById('panoHiker'), pTrail = document.getElementById('panoTrail'), homeX = parseFloat(pano.getAttribute('data-home')) || 720;
     function trailY(x) {
       var L = pTrail.getTotalLength(), lo = 0, hi = L;
       for (var i = 0; i < 18; i++) { var mid = (lo + hi) / 2; if (pTrail.getPointAtLength(mid).x < x) lo = mid; else hi = mid; }
       return pTrail.getPointAtLength(lo).y;
     }
     function walk(x) { x = Math.max(14, Math.min(1426, x)); pHiker.style.transform = 'translate(' + (x - 13) + 'px,' + (trailY(x) - 41) + 'px)'; }
-    function mark(a) {
-      lms.forEach(function (l) { l.classList.toggle('on', l === a); });
-      var key = a ? (a.getAttribute('href') || '') : '';
-      Array.prototype.forEach.call(labels, function (t, i) { t.classList.toggle('on', !!a && lms[i] === a); });
+    var strip = pano.querySelector('.pano');
+    if (reduce || !('IntersectionObserver' in window)) { walk(homeX); }
+    else {
+      pHiker.style.transition = 'none'; walk(Math.max(20, homeX - 420));
+      new IntersectionObserver(function (es, ob) { if (es[0].isIntersecting) { pHiker.style.transition = ''; walk(homeX); ob.disconnect(); } }, { threshold: 0.35 }).observe(pano);
     }
-    function show(a) {
-      clearTimeout(hideT); mark(a); walk(parseFloat(a.getAttribute('data-x')));
-      pCard.querySelector('.n').textContent = a.getAttribute('data-name');
-      pCard.querySelector('.a').textContent = a.getAttribute('data-acres') || '';
-      pCard.querySelector('.w').textContent = a.getAttribute('data-where');
-      pCard.querySelector('a').setAttribute('href', a.getAttribute('href'));
-      pCard.hidden = false;
-      var r = a.querySelector('.art').getBoundingClientRect(), w = pano.getBoundingClientRect();
-      var left = r.left - w.left + r.width / 2 - pCard.offsetWidth / 2, top = r.top - w.top - pCard.offsetHeight - 12;
-      pCard.style.left = Math.max(8, Math.min(w.width - pCard.offsetWidth - 8, left)) + 'px';
-      pCard.style.top = Math.max(-pCard.offsetHeight + 40, top) + 'px';
-    }
-    function rest() { hideT = setTimeout(function () { pCard.hidden = true; mark(hereLm || null); walk(homeX); }, 350); }
-    lms.forEach(function (a) {
-      a.addEventListener('mouseenter', function () { if (!touch) show(a); });
-      a.addEventListener('focus', function () { show(a); });
-      a.addEventListener('click', function (e) { if (touch && !a.classList.contains('on')) { e.preventDefault(); show(a); } });
-    });
-    pano.addEventListener('mouseleave', function () { if (!touch) rest(); });
-    pCard.addEventListener('mouseenter', function () { clearTimeout(hideT); });
-    pano.querySelector('.pano').addEventListener('scroll', function () { if (!pCard.hidden) { pCard.hidden = true; } }, { passive: true });
-    var hereLm = pano.querySelector('a.lm.here');
-    if (hereLm) { homeX = parseFloat(hereLm.getAttribute('data-x')); mark(hereLm); }
-    walk(homeX);
-    if (hereLm && pano.querySelector('.pano').scrollWidth > pano.clientWidth) { pano.querySelector('.pano').scrollLeft = Math.max(0, homeX / 1440 * pano.querySelector('.pano').scrollWidth - pano.clientWidth / 2); }
+    if (strip.scrollWidth > pano.clientWidth) { strip.scrollLeft = Math.max(0, homeX / 1440 * strip.scrollWidth - pano.clientWidth / 2); }
   }
 })();

@@ -638,21 +638,9 @@ body.admin-bar .trip{top:calc(94px + env(safe-area-inset-top,0px))}
 .pano{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
 .pano::-webkit-scrollbar{display:none}
 .pano svg{display:block;width:100%;min-width:1100px;height:auto}
-.pano .labels text{font-family:'Nunito Sans',system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;fill:#0A3F78;pointer-events:none}
-.pano .labels text.on{fill:#B8430A}
-.pano .lm{cursor:pointer;outline:none}
-.pano .lm .art{transition:transform .25s}
-.pano .lm.on .art{transform:translateY(-4px)}
-.pano .lm:focus-visible .hit{stroke:#C6F06A;stroke-width:2;stroke-dasharray:4 4}
-.pano .hiker{transition:transform 1.4s cubic-bezier(.4,0,.2,1)}
+.pano .hiker{transition:transform 2.6s cubic-bezier(.4,0,.2,1)}
 .pano .sun,.pano .stars{display:none}
 .foot:not(.t-dawn):not(.t-dusk):not(.t-night) .sun-day,.foot.t-dawn .sun-dawn,.foot.t-dusk .sun-dusk,.foot.t-night .sun-night,.foot.t-night .stars{display:block}
-.pano-card{position:absolute;z-index:3;width:226px;box-sizing:border-box;background:#F3ECD8;color:#04386B;border-radius:10px;padding:14px 16px;box-shadow:0 14px 30px -14px rgba(0,0,0,.55)}
-.pano-card[hidden]{display:none}
-.pano-card .n{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#B8430A}
-.pano-card .a{font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
-.pano-card .w{font-size:13px;color:#0A3F78}
-.pano-card a{display:inline-block;margin-top:6px;padding:4px 0;font-size:13px;font-weight:700;color:#0A3F78}
 .foot .pano-pad{display:none}
 @media (max-width:1100px){
   .foot .cols{grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 28px}
@@ -664,4 +652,4 @@ body.admin-bar .trip{top:calc(94px + env(safe-area-inset-top,0px))}
   .foot .cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:26px 20px}
   .foot .col a{padding:10px 0}
 }
-@media (prefers-reduced-motion:reduce){.pano .hiker,.pano .lm .art,.foot{transition:none}}
+@media (prefers-reduced-motion:reduce){.pano .hiker,.foot{transition:none}}
