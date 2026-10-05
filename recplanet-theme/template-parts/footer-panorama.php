@@ -152,22 +152,6 @@ $lm = function ( string $key, int $x ) use ( $marks, $here ): string {
 <path d="M0 300 Q200 290 400 298 T800 296 T1200 300 T1440 294 L1440 400 L0 400 Z" fill="#F3ECD8"/>
 <path d="M0 300 Q200 290 400 298 T800 296 T1200 300 T1440 294 L1440 400 L0 400 Z" fill="url(#rp-h)" opacity="0.22"/>
 
-<g class="labels" aria-hidden="true">
-<text data-for="golden-gate" x="76" y="319">Golden Gate · CA</text>
-<text data-for="sequoia" x="258" y="335">Sequoia · CA</text>
-<text data-for="yosemite" x="392" y="319">Yosemite · CA</text>
-<text data-for="saguaro" x="508" y="335">Saguaro · AZ</text>
-<text data-for="grand-canyon" x="640" y="319">Grand Canyon · AZ</text>
-<text data-for="arches" x="832" y="335">Arches · UT</text>
-<text data-for="yellowstone" x="914" y="319">Yellowstone · WY</text>
-<text data-for="grand-teton" x="1028" y="335">Grand Teton · WY</text>
-<text data-for="gateway-arch" x="1142" y="319">Gateway Arch · MO</text>
-<text data-for="smokies" x="1250" y="335">Smokies · TN</text>
-<text data-for="everglades" x="1316" y="351">Everglades · FL</text>
-<text data-for="liberty" x="1362" y="319">Liberty · NY</text>
-<text data-for="acadia" x="1436" y="335" text-anchor="end">Acadia · ME</text>
-</g>
-
 <path id="panoTrail" d="M0 384 C200 372 380 396 560 380 S900 368 1080 384 S1320 396 1440 378" stroke="#0A3F78" stroke-width="2" stroke-dasharray="2 9" stroke-linecap="round" fill="none"/>
 <path d="M90 396 l-4 -10 M92 396 l0 -12 M94 396 l5 -9 M330 394 l-4 -9 M332 394 l1 -11 M334 394 l5 -8 M612 398 l-4 -10 M614 398 l0 -12 M616 398 l5 -9 M820 394 l-3 -9 M822 394 l1 -11 M824 394 l5 -8 M1150 398 l-4 -10 M1152 398 l0 -12 M1154 398 l5 -9 M1300 394 l-4 -9 M1302 394 l1 -11 M1304 394 l5 -8" stroke="#0A3F78" stroke-width="1.1" stroke-linecap="round" fill="none"/>
 
