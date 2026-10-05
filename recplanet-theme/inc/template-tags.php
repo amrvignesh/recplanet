@@ -201,7 +201,14 @@ function rp_stars( int $photo_id ): string {
 	for ( $i = 1; $i <= 5; $i++ ) {
 		$html .= '<button type="button" class="star' . ( $score >= $i - 0.25 ? ' on' : '' ) . '" data-v="' . $i . '" aria-label="' . $i . ' star' . ( $i > 1 ? 's' : '' ) . '">★</button>';
 	}
-	return $html . '<span class="cnt"><b class="num">' . esc_html( number_format( $score, 1 ) ) . '</b> from <b class="num">' . esc_html( number_format( $votes ) ) . '</b> ratings</span></div>';
+	$html   .= '<span class="cnt"><b class="num">' . esc_html( number_format( $score, 1 ) ) . '</b> from <b class="num">' . esc_html( number_format( $votes ) ) . '</b> ratings</span></div>';
+	$contest = RP\Votes::live_contest( $photo_id );
+	$target  = RP\Votes::star_target( $contest );
+	$stars   = (int) get_post_meta( $photo_id, 'rp_stars', true );
+	if ( $target ) {
+		$html .= '<div class="starrace" data-photo="' . $photo_id . '" data-target="' . $target . '"><div class="lbl"><b class="num s">' . esc_html( number_format( $stars ) ) . '</b> of ' . esc_html( number_format( $target ) ) . ' stars. The first photo there wins.</div><div class="bar"><i style="width:' . esc_attr( min( 100, round( $stars / $target * 100, 1 ) ) ) . '%"></i></div></div>';
+	}
+	return $html . '<p class="voterno" data-photo="' . $photo_id . '" hidden></p>';
 }
 
 /** "Fishing" -> "fish", "Playground" -> "find a playground", for page titles. */

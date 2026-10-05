@@ -36,6 +36,11 @@ class Contest_Admin {
 		foreach ( [ 'rp_opens_at' => 'Entries open', 'rp_closes_at' => 'Entries close', 'rp_voting_closes_at' => 'Voting closes' ] as $k => $l ) {
 			echo '<div><label for="' . esc_attr( $k ) . '">' . esc_html( $l ) . '</label><input type="date" id="' . esc_attr( $k ) . '" name="' . esc_attr( $k ) . '" value="' . esc_attr( $m( $k ) ) . '"></div>';
 		}
+		$voters = Votes::voters_so_far( $post->ID );
+		echo '<div><label for="rp_star_target">Photo prize: first photo to reach</label><input type="number" min="0" step="1" id="rp_star_target" name="rp_star_target" value="' . esc_attr( '' === $m( 'rp_star_target' ) ? '3000' : $m( 'rp_star_target' ) ) . '"><p>stars. The first photo whose stars add up to this wins and is set as first place. 0 switches it off.</p></div>';
+		echo '<div><label for="rp_winning_voter">Voting prize: voter number</label><input type="number" min="0" step="1" id="rp_winning_voter" name="rp_winning_voter" value="' . esc_attr( '' === $m( 'rp_winning_voter' ) ? '10000' : $m( 'rp_winning_voter' ) ) . '"><p>wins. ' . esc_html( number_format( $voters ) ) . ' votes so far. The winner is shown a code at once. 0 switches it off.</p></div>';
+		echo '<div><label for="rp_voter_start">Voter count starts at</label><input type="number" min="0" step="1" id="rp_voter_start" name="rp_voter_start" value="' . esc_attr( $m( 'rp_voter_start' ) ?: '0' ) . '"><p>Leave at 0, or carry a count over from before.</p></div>';
+		echo '<div><label for="rp_voter_prize">Voting prize</label><input type="text" id="rp_voter_prize" name="rp_voter_prize" maxlength="200" value="' . esc_attr( $m( 'rp_voter_prize' ) ) . '" placeholder="Announced on our Facebook page"></div>';
 		echo '<div class="rp-wide"><label for="rp_prizes">Prizes</label><input type="text" id="rp_prizes" name="rp_prizes" maxlength="200" value="' . esc_attr( $m( 'rp_prizes' ) ) . '" placeholder="$150 to the top-rated photo, $50 drawn among voters"><p>Shown on the contest page. The default contest length in Settings › RecPlanet is ' . (int) $days . ' days; dates here override it.</p></div>';
 		echo '<div class="rp-wide"><label>Winners</label>';
 		$entries = get_posts( [ 'post_type' => POST_PHOTO, 'posts_per_page' => 500, 'post_status' => 'publish', 'meta_key' => 'rp_score', 'orderby' => 'meta_value_num', 'order' => 'DESC', 'meta_query' => [ [ 'key' => 'rp_contest_id', 'value' => $post->ID ] ] ] );
@@ -61,6 +66,10 @@ class Contest_Admin {
 			update_post_meta( $post_id, $k, preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ) ? $v : '' );
 		}
 		update_post_meta( $post_id, 'rp_prizes', sanitize_text_field( wp_unslash( $_POST['rp_prizes'] ?? '' ) ) );
+		foreach ( [ 'rp_star_target', 'rp_winning_voter', 'rp_voter_start' ] as $k ) {
+			update_post_meta( $post_id, $k, max( 0, (int) ( $_POST[ $k ] ?? 0 ) ) );
+		}
+		update_post_meta( $post_id, 'rp_voter_prize', sanitize_text_field( wp_unslash( $_POST['rp_voter_prize'] ?? '' ) ) );
 		$winners = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $_POST['rp_winners'] ?? [] ) ) ) ) );
 		update_post_meta( $post_id, 'rp_winners', wp_json_encode( $winners ) );
 	}

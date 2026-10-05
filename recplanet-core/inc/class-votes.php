@@ -4,12 +4,16 @@ namespace RP;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Star ratings on photos, as on the old site: one to five stars, open to anyone.
- * A visitor without an account is keyed on a salted hash of IP and user agent and can change
- * their rating; a member's rating is tied to the account. Rating is closed once the photo's
- * contest has closed voting.
+ * Star ratings on photos, as on the old site: one to five stars, open to anyone, one vote per photo per
+ * connection (a member's vote is tied to the account instead). Rating is closed once the photo's contest has
+ * closed voting.
  *
- * Cached on the photo: rp_votes (number of ratings) and rp_score (average stars, one decimal).
+ * Two prizes ride on the ratings, both set on the contest:
+ *   - the photo prize goes to the first photo whose stars add up to the contest's target (3,000 on the old site);
+ *   - the voting prize goes to the voter whose vote is number N in the contest (10,000 on the old site). Every new
+ *     vote in an open contest gets the next voter number; the winner is shown a claim code at once.
+ *
+ * Cached on the photo: rp_votes (number of ratings), rp_score (average stars, one decimal) and rp_stars (the sum).
  * Migrated photos add their frozen Drupal totals, rp_legacy_votes and rp_legacy_score.
  */
 class Votes {
@@ -29,6 +33,19 @@ class Votes {
 		$ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
 		$ip = trim( explode( ',', $ip )[0] );
 		return sha1( wp_salt( 'nonce' ) . '|' . $ip . '|' . ( $_SERVER['HTTP_USER_AGENT'] ?? '' ) );
+	}
+
+	/** The contest a photo is entered in, when that contest is still taking votes; 0 otherwise. */
+	public static function live_contest( int $photo_id ): int {
+		$contest = (int) get_post_meta( $photo_id, 'rp_contest_id', true );
+		if ( ! $contest || ! in_array( get_post_meta( $contest, 'rp_status', true ), [ 'open', 'voting' ], true ) ) {
+			return 0;
+		}
+		return $contest;
+	}
+
+	public static function star_target( int $contest ): int {
+		return $contest ? max( 0, (int) get_post_meta( $contest, 'rp_star_target', true ) ) : 0;
 	}
 
 	private static function open( int $photo_id ): bool|string {
@@ -56,6 +73,14 @@ class Votes {
 		return false;
 	}
 
+	private static function mine( int $photo_id ): ?object {
+		global $wpdb;
+		$uid = get_current_user_id();
+		return $wpdb->get_row( $uid
+			? $wpdb->prepare( "SELECT id, value, voter_no FROM " . table( 'votes' ) . " WHERE photo_id = %d AND user_id = %d", $photo_id, $uid )
+			: $wpdb->prepare( "SELECT id, value, voter_no FROM " . table( 'votes' ) . " WHERE photo_id = %d AND user_id = 0 AND voter_hash = %s", $photo_id, self::voter_hash() ) );
+	}
+
 	public static function rate( \WP_REST_Request $r ): \WP_REST_Response {
 		global $wpdb;
 		$id    = (int) $r['id'];
@@ -70,14 +95,35 @@ class Votes {
 		if ( self::rate_limited() ) {
 			return new \WP_REST_Response( [ 'error' => 'Too many ratings from this connection. Try again later.' ], 429 );
 		}
-		$uid  = get_current_user_id();
-		$hash = $uid ? '' : self::voter_hash();
-		$wpdb->query( $wpdb->prepare(
-			"INSERT INTO " . table( 'votes' ) . " (photo_id, user_id, voter_hash, value, created_at) VALUES (%d, %d, %s, %d, %s)
-			 ON DUPLICATE KEY UPDATE value = VALUES(value), created_at = VALUES(created_at)",
-			$id, $uid, $hash, $stars, current_time( 'mysql', true )
-		) );
-		return new \WP_REST_Response( self::refresh( $id ) + [ 'yours' => $stars ] );
+		$uid   = get_current_user_id();
+		$hash  = $uid ? '' : self::voter_hash();
+		$had   = self::mine( $id );
+		$extra = [];
+		if ( $had ) {
+			$wpdb->update( table( 'votes' ), [ 'value' => $stars, 'created_at' => current_time( 'mysql', true ) ], [ 'id' => $had->id ] );
+			$no = (int) $had->voter_no;
+		} else {
+			$contest = self::live_contest( $id );
+			$no      = 0;
+			// The voter number is handed out under a lock so two votes at the same instant never share one.
+			$locked = $contest ? (bool) $wpdb->get_var( "SELECT GET_LOCK('rp_voter_no', 3)" ) : false;
+			if ( $contest ) {
+				$no = 1 + max( (int) get_post_meta( $contest, 'rp_voter_start', true ), (int) $wpdb->get_var( $wpdb->prepare(
+					"SELECT COALESCE(MAX(v.voter_no), 0) FROM " . table( 'votes' ) . " v JOIN {$wpdb->postmeta} m ON m.post_id = v.photo_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d", $contest ) ) );
+			}
+			$wpdb->query( $wpdb->prepare(
+				"INSERT INTO " . table( 'votes' ) . " (photo_id, user_id, voter_hash, value, voter_no, created_at) VALUES (%d, %d, %s, %d, %d, %s)
+				 ON DUPLICATE KEY UPDATE value = VALUES(value), created_at = VALUES(created_at)",
+				$id, $uid, $hash, $stars, $no, current_time( 'mysql', true )
+			) );
+			if ( $locked ) {
+				$wpdb->query( "SELECT RELEASE_LOCK('rp_voter_no')" );
+			}
+			if ( $contest && $no && $no === (int) get_post_meta( $contest, 'rp_winning_voter', true ) ) {
+				$extra = [ 'winner' => true, 'code' => Draw::auto_win( $contest, $uid, $hash, $no ) ];
+			}
+		}
+		return new \WP_REST_Response( self::refresh( $id ) + [ 'yours' => $stars, 'voter_no' => $no ] + $extra );
 	}
 
 	public static function unrate( \WP_REST_Request $r ): \WP_REST_Response {
@@ -89,34 +135,50 @@ class Votes {
 		}
 		$uid = get_current_user_id();
 		$wpdb->delete( table( 'votes' ), $uid ? [ 'photo_id' => $id, 'user_id' => $uid ] : [ 'photo_id' => $id, 'user_id' => 0, 'voter_hash' => self::voter_hash() ] );
-		return new \WP_REST_Response( self::refresh( $id ) + [ 'yours' => 0 ] );
+		return new \WP_REST_Response( self::refresh( $id ) + [ 'yours' => 0, 'voter_no' => 0 ] );
 	}
 
 	public static function status( \WP_REST_Request $r ): \WP_REST_Response {
-		global $wpdb;
 		$id   = (int) $r['id'];
-		$uid  = get_current_user_id();
-		$mine = (int) $wpdb->get_var( $uid
-			? $wpdb->prepare( "SELECT value FROM " . table( 'votes' ) . " WHERE photo_id = %d AND user_id = %d", $id, $uid )
-			: $wpdb->prepare( "SELECT value FROM " . table( 'votes' ) . " WHERE photo_id = %d AND user_id = 0 AND voter_hash = %s", $id, self::voter_hash() ) );
-		return new \WP_REST_Response( self::totals( $id ) + [ 'yours' => $mine ] );
+		$mine = self::mine( $id );
+		return new \WP_REST_Response( self::totals( $id ) + [ 'yours' => $mine ? (int) $mine->value : 0, 'voter_no' => $mine ? (int) $mine->voter_no : 0 ] );
 	}
 
-	/** Ratings and average stars, live plus the frozen Drupal figures for migrated photos. */
+	/** Ratings, average stars and the star total, live plus the frozen Drupal figures for migrated photos. */
 	public static function totals( int $photo_id ): array {
 		global $wpdb;
-		$live = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS n, COALESCE(AVG(value),0) AS avg FROM " . table( 'votes' ) . " WHERE photo_id = %d", $photo_id ) );
+		$live = $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS n, COALESCE(SUM(value),0) AS total FROM " . table( 'votes' ) . " WHERE photo_id = %d", $photo_id ) );
 		$ln   = (int) get_post_meta( $photo_id, 'rp_legacy_votes', true );
 		$ls   = (float) get_post_meta( $photo_id, 'rp_legacy_score', true );
 		$n    = (int) $live->n + $ln;
-		$sum  = (float) $live->n * (float) $live->avg + $ln * $ls;
-		return [ 'votes' => $n, 'score' => $n ? round( $sum / $n, 1 ) : 0 ];
+		$sum  = (float) $live->total + $ln * $ls;
+		return [ 'votes' => $n, 'score' => $n ? round( $sum / $n, 1 ) : 0, 'stars' => (int) round( $sum ), 'target' => self::star_target( (int) get_post_meta( $photo_id, 'rp_contest_id', true ) ) ];
 	}
 
-	private static function refresh( int $photo_id ): array {
+	/** Re-cache a photo's figures; called after every vote and by the backfill. Awards the photo prize at the target. */
+	public static function refresh( int $photo_id ): array {
 		$t = self::totals( $photo_id );
 		update_post_meta( $photo_id, 'rp_votes', $t['votes'] );
 		update_post_meta( $photo_id, 'rp_score', $t['score'] );
+		update_post_meta( $photo_id, 'rp_stars', $t['stars'] );
+		$contest = self::live_contest( $photo_id );
+		if ( $contest && $t['target'] && $t['stars'] >= $t['target'] && ! get_post_meta( $contest, 'rp_star_winner', true ) ) {
+			update_post_meta( $contest, 'rp_star_winner', $photo_id );
+			$winners = json_decode( (string) get_post_meta( $contest, 'rp_winners', true ), true ) ?: [];
+			if ( ! in_array( $photo_id, $winners, true ) ) {
+				array_unshift( $winners, $photo_id );
+				update_post_meta( $contest, 'rp_winners', wp_json_encode( array_slice( $winners, 0, 3 ) ) );
+			}
+			wp_mail( get_option( 'rp_contact_email', '' ) ?: get_option( 'admin_email' ), '[RecPlanet] A photo has reached ' . number_format( $t['target'] ) . ' stars',
+				'"' . get_the_title( $photo_id ) . '" is the first photo in "' . get_the_title( $contest ) . '" to reach ' . number_format( $t['target'] ) . " stars and wins the photo contest prize.\n\n" . get_permalink( $photo_id ) . "\n\nIt has been set as the contest's first-place winner: " . admin_url( 'post.php?action=edit&post=' . $contest ) );
+		}
 		return $t;
+	}
+
+	/** Votes cast so far in a contest: the number the next voter gets, minus one. */
+	public static function voters_so_far( int $contest ): int {
+		global $wpdb;
+		return max( (int) get_post_meta( $contest, 'rp_voter_start', true ), (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COALESCE(MAX(v.voter_no), 0) FROM " . table( 'votes' ) . " v JOIN {$wpdb->postmeta} m ON m.post_id = v.photo_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d", $contest ) ) );
 	}
 }

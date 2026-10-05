@@ -28,7 +28,7 @@ $mode    = $park ? 'park' : 'contest';
         <input type="hidden" name="park_id" id="park_id" value="<?php echo (int) $park->ID; ?>">
       <?php else : ?>
         <b style="font-family:'Bricolage Grotesque';font-size:17px">Enter in under a minute</b>
-        <p class="note" style="margin:0">Any recreational photo counts: a sunset over a lake, a trail, a bird, a frog on a log. It must be taken in a park or other recreational area; saying where is up to you.</p>
+        <p class="note" style="margin:0">Keep it recreational: people doing something recreational, or a photo taken in a public park or other public land. Saying where is up to you.</p>
       <?php endif; ?>
       <label class="drop" for="photo">Choose a photo<br><small>JPEG or PNG, up to 20 MB.<?php echo 'contest' === $mode ? ' If the photo carries a location, the nearest park is suggested.' : ''; ?></small><input id="photo" type="file" name="photo" accept="image/jpeg,image/png" required style="margin-top:8px"></label>
       <label for="cap">Title<input id="cap" type="text" name="title" placeholder="<?php echo 'park' === $mode ? 'What the photo shows' : 'Sunset over Lake Lanier'; ?>" required maxlength="120"></label>
@@ -40,7 +40,7 @@ $mode    = $park ? 'park' : 'contest';
         <label class="ck" style="font-weight:600;font-size:13px"><input type="checkbox" name="also_contest" value="<?php echo (int) $contest->ID; ?>">Also enter it in <?php echo esc_html( get_the_title( $contest ) ); ?></label>
       <?php endif; ?>
       <label for="taken">Taken on <small style="font-weight:500;color:var(--muted)">(optional)</small><input id="taken" type="date" name="taken_on"></label>
-      <label class="ck" style="font-weight:600;font-size:13px"><input type="checkbox" name="rights" value="1" required>I took this photo and hold the rights to it. It was taken in a park or other recreational area, and there are no children in it.</label>
+      <label class="ck" style="font-weight:600;font-size:13px"><input type="checkbox" name="rights" value="1" required>I took this photo and hold the rights to it. It is recreational: people doing something recreational, or a public park or other public land. There are no children and no nudity in it.</label>
       <button class="btn btn-lime" type="submit"><?php echo 'park' === $mode ? 'Add the photo' : 'Enter the contest'; ?></button>
       <small class="note" style="margin:0">An editor approves photos before they show. <a href="<?php echo esc_url( home_url( '/rules' ) ); ?>">The rules.</a></small>
     </form>

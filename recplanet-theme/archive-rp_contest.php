@@ -6,7 +6,7 @@ $open = $open ? $open[0] : null;
 $past = get_posts( [ 'post_type' => 'rp_contest', 'posts_per_page' => 12, 'post_status' => 'publish', 'exclude' => $open ? [ $open->ID ] : [] ] );
 $sort = sanitize_key( $_GET['sort'] ?? 'top' );
 $entries = get_posts( [ 'post_type' => 'rp_photo', 'posts_per_page' => 24, 'post_status' => 'publish', 'paged' => max( 1, (int) get_query_var( 'paged' ) ),
-	'meta_key' => 'newest' === $sort ? '' : 'rp_score', 'orderby' => 'newest' === $sort ? 'date' : 'meta_value_num', 'order' => 'DESC',
+	'meta_key' => 'newest' === $sort ? '' : 'rp_stars', 'orderby' => 'newest' === $sort ? 'date' : 'meta_value_num', 'order' => 'DESC',
 	'meta_query' => $open ? [ [ 'key' => 'rp_contest_id', 'value' => $open->ID ] ] : [] ] );
 $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
 ?>
@@ -24,6 +24,12 @@ $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
         <?php if ( get_post_meta( $open->ID, 'rp_prizes', true ) ) : ?><div><small>Prizes</small><b><?php echo esc_html( get_post_meta( $open->ID, 'rp_prizes', true ) ); ?></b></div><?php endif; ?>
       </div>
       <?php endif; ?>
+      <?php if ( $open ) : $rp_t = (int) get_post_meta( $open->ID, 'rp_star_target', true ); $rp_w = (int) get_post_meta( $open->ID, 'rp_winning_voter', true ); $rp_v = RP\Votes::voters_so_far( $open->ID ); if ( $rp_t || $rp_w ) : ?>
+      <div class="contest-prizes">
+        <?php if ( $rp_t ) : ?><div><small>Photo contest</small><b>First photo to <?php echo esc_html( number_format( $rp_t ) ); ?> stars wins</b></div><?php endif; ?>
+        <?php if ( $rp_w ) : ?><div><small>Voting contest</small><b>Voter #<?php echo esc_html( number_format( $rp_w ) ); ?> wins</b><small style="margin-top:4px;text-transform:none;letter-spacing:0"><?php echo esc_html( number_format( $rp_v ) ); ?> votes so far</small></div><?php endif; ?>
+      </div>
+      <?php endif; endif; ?>
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><a class="btn btn-white" href="<?php echo esc_url( home_url( '/rules' ) ); ?>">Contest rules</a></div>
     </div>
     <?php get_template_part( 'template-parts/upload-form', null, [ 'contest' => $open, 'park' => $park_pre ] ); ?>
@@ -34,7 +40,7 @@ $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
       <div class="sortbar" style="margin:0"><a class="<?php echo 'top' === $sort ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', 'top' ) ); ?>">Top rated</a><a class="<?php echo 'newest' === $sort ? 'on' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'sort', 'newest' ) ); ?>">Newest</a></div></div>
     <div class="gallery">
       <?php foreach ( $entries as $p ) : $sc = (float) get_post_meta( $p->ID, 'rp_score', true ); $n = (int) get_post_meta( $p->ID, 'rp_votes', true ); ?>
-        <a class="tile" href="<?php echo esc_url( get_permalink( $p ) ); ?>" style="--r:0"><?php echo has_post_thumbnail( $p ) ? get_the_post_thumbnail( $p, 'rp-tile', [ 'loading' => 'lazy' ] ) : rp_scene_svg( $p->ID ); ?><span class="votes">★ <?php echo esc_html( number_format( $sc, 1 ) ); ?> · <?php echo esc_html( number_format( $n ) ); ?></span><div class="cap"><?php echo esc_html( get_the_title( $p ) ); ?><small><?php echo esc_html( get_post_meta( $p->ID, 'rp_contributor', true ) ?: get_the_author_meta( 'display_name', $p->post_author ) ); ?></small></div></a>
+        <a class="tile" href="<?php echo esc_url( get_permalink( $p ) ); ?>" style="--r:0"><?php echo has_post_thumbnail( $p ) ? get_the_post_thumbnail( $p, 'rp-tile', [ 'loading' => 'lazy' ] ) : rp_scene_svg( $p->ID ); ?><span class="votes">★ <?php echo esc_html( number_format( (int) get_post_meta( $p->ID, 'rp_stars', true ) ) ); ?> stars</span><div class="cap"><?php echo esc_html( get_the_title( $p ) ); ?><small><?php echo esc_html( get_post_meta( $p->ID, 'rp_contributor', true ) ?: get_the_author_meta( 'display_name', $p->post_author ) ); ?></small></div></a>
       <?php endforeach; ?>
       <?php if ( ! $entries ) : ?><p class="ph">No entries yet. Yours could be the first.</p><?php endif; ?>
     </div>

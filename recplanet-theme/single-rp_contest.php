@@ -8,7 +8,7 @@ $winners = json_decode( (string) get_post_meta( $id, 'rp_winners', true ), true 
 $sort    = sanitize_key( $_GET['sort'] ?? 'top' );
 $paged   = max( 1, (int) get_query_var( 'paged' ) );
 $q = new WP_Query( [ 'post_type' => 'rp_photo', 'posts_per_page' => 40, 'paged' => $paged, 'post_status' => 'publish',
-	'meta_key' => 'newest' === $sort ? '' : 'rp_score', 'orderby' => 'newest' === $sort ? 'date' : 'meta_value_num', 'order' => 'DESC',
+	'meta_key' => 'newest' === $sort ? '' : 'rp_stars', 'orderby' => 'newest' === $sort ? 'date' : 'meta_value_num', 'order' => 'DESC',
 	'meta_query' => [ [ 'key' => 'rp_contest_id', 'value' => $id ] ] ] );
 $n = (int) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT COUNT(*) FROM {$GLOBALS['wpdb']->postmeta} pm JOIN {$GLOBALS['wpdb']->posts} p ON p.ID=pm.post_id WHERE pm.meta_key='rp_contest_id' AND pm.meta_value=%d AND p.post_status='publish'", $id ) );
 $votes = (int) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT COALESCE(SUM(CAST(v.meta_value AS UNSIGNED)),0) FROM {$GLOBALS['wpdb']->postmeta} pm JOIN {$GLOBALS['wpdb']->postmeta} v ON v.post_id=pm.post_id AND v.meta_key='rp_votes' WHERE pm.meta_key='rp_contest_id' AND pm.meta_value=%d", $id ) );

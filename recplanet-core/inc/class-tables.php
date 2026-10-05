@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Tables {
 
-	const SCHEMA_VERSION = 5;
+	const SCHEMA_VERSION = 6;
 
 	public static function install(): void {
 		global $wpdb;
@@ -68,6 +68,7 @@ class Tables {
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			voter_hash char(40) NOT NULL DEFAULT '',
 			value tinyint(4) NOT NULL DEFAULT 1,
+			voter_no int(10) unsigned NOT NULL DEFAULT 0,
 			created_at datetime NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY one_per_voter (photo_id,user_id,voter_hash),

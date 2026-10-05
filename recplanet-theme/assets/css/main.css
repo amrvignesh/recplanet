@@ -653,3 +653,15 @@ body.admin-bar .trip{top:calc(94px + env(safe-area-inset-top,0px))}
   .foot .col a{padding:10px 0}
 }
 @media (prefers-reduced-motion:reduce){.pano .hiker,.foot{transition:none}}
+
+/* ---- the contest's two races: stars to the target, and your voter number ---- */
+.starrace{margin-top:10px;max-width:420px}
+.starrace .lbl{font-size:13px;color:var(--muted)}
+.starrace .lbl b{color:var(--ink);font-size:15px}
+.starrace .bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:6px}
+.starrace .bar i{display:block;height:100%;background:linear-gradient(90deg,#FFB300,var(--orange));border-radius:999px;transition:width .5s}
+.voterno{margin:8px 0 0;font-family:'Caveat',cursive;font-size:22px;color:var(--lime-deep)}
+.contest-prizes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:18px}
+.contest-prizes div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 14px}
+.contest-prizes small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.contest-prizes b{font-family:'Bricolage Grotesque',sans-serif;font-size:18px}

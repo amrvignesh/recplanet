@@ -24,6 +24,34 @@ class Draw {
 		} );
 	}
 
+	/**
+	 * The voting contest, as on the old site: the voter whose vote is number N in the contest wins. Called by Votes at
+	 * the moment that vote is cast. Records the win with a claim code, tells the editor, emails a signed-in winner,
+	 * and returns the code so the winner sees it at once.
+	 */
+	public static function auto_win( int $contest, int $user_id, string $voter_hash, int $voter_no ): string {
+		$all = (array) get_option( 'rp_draws', [] );
+		foreach ( $all as $d ) {
+			if ( ! empty( $d['auto'] ) && (int) $d['contest_id'] === $contest && (int) $d['pool'] === $voter_no ) {
+				return (string) $d['code'];
+			}
+		}
+		$prize = (string) get_post_meta( $contest, 'rp_voter_prize', true );
+		$code  = strtoupper( wp_generate_password( 12, false, false ) );
+		$all[] = [
+			'id' => wp_generate_uuid4(), 'contest_id' => $contest, 'from' => 'voter #' . number_format( $voter_no ), 'to' => '', 'prize' => $prize,
+			'pool' => $voter_no, 'user_id' => $user_id, 'voter_hash' => $voter_hash, 'ratings' => 1, 'code' => $code,
+			'drawn_at' => current_time( 'mysql', true ), 'drawn_by' => 0, 'claimed_at' => '', 'auto' => true,
+		];
+		update_option( 'rp_draws', $all, false );
+		wp_mail( get_option( 'rp_contact_email', '' ) ?: get_option( 'admin_email' ), '[RecPlanet] Voter #' . number_format( $voter_no ) . ' has voted',
+			'Voter #' . number_format( $voter_no ) . ' in "' . get_the_title( $contest ) . '" has just voted and wins the voting contest' . ( $prize ? " ($prize)" : '' ) . ".\n\nTheir claim code is $code. They were shown it on screen and asked to send it through the contact page. Check and mark it claimed here: " . admin_url( 'edit.php?post_type=' . POST_CONTEST . '&page=rp-draw' ) );
+		if ( $user_id && ( $u = get_user_by( 'id', $user_id ) ) ) {
+			wp_mail( $u->user_email, 'You won the RecPlanet voting contest', 'Congratulations! You are voter #' . number_format( $voter_no ) . ' and win the voting contest' . ( $prize ? " ($prize)" : '' ) . ".\n\nYour winning code is $code. Send it through the contact page to receive the prize: " . home_url( '/contact/?about=prize' ) );
+		}
+		return $code;
+	}
+
 	/** Draws on file, newest first. */
 	public static function draws(): array {
 		return array_reverse( (array) get_option( 'rp_draws', [] ) );
@@ -135,7 +163,7 @@ class Draw {
 		} elseif ( 'none' === $msg ) {
 			echo '<div class="notice notice-warning"><p>No voters matched that contest and period.</p></div>';
 		}
-		echo '<p>Every distinct voter, signed in or not, has one ticket. ' . esc_html( number_format( $total ) ) . ' voters on file in total.</p>';
+		echo '<p>The voting contest awards itself: the voter whose vote is the winning number set on the contest is shown a code at once and appears in the list below. A draw by hand is for anything extra. Every distinct voter, signed in or not, has one ticket. ' . esc_html( number_format( $total ) ) . ' voters on file in total.</p>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="background:#fff;padding:16px;border:1px solid #ccd0d4;max-width:640px">';
 		wp_nonce_field( 'rp_draw' );
 		echo '<input type="hidden" name="action" value="rp_draw">';
