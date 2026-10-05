@@ -24,10 +24,10 @@ $park_pre = ! empty( $_GET['park'] ) ? get_post( (int) $_GET['park'] ) : null;
         <?php if ( get_post_meta( $open->ID, 'rp_prizes', true ) ) : ?><div><small>Prizes</small><b><?php echo esc_html( get_post_meta( $open->ID, 'rp_prizes', true ) ); ?></b></div><?php endif; ?>
       </div>
       <?php endif; ?>
-      <?php if ( $open ) : $rp_t = (int) get_post_meta( $open->ID, 'rp_star_target', true ); $rp_w = (int) get_post_meta( $open->ID, 'rp_winning_voter', true ); $rp_v = RP\Votes::voters_so_far( $open->ID ); if ( $rp_t || $rp_w ) : ?>
+      <?php if ( $open ) : $rp_t = (int) get_post_meta( $open->ID, 'rp_star_target', true ); $rp_w = (int) get_post_meta( $open->ID, 'rp_winning_voter', true ); $rp_scope = get_post_meta( $open->ID, 'rp_voter_scope', true ); $rp_v = 'contest' === $rp_scope ? RP\Votes::voters_so_far( $open->ID ) : RP\Votes::votes_in_contest( $open->ID ); if ( $rp_t || $rp_w ) : ?>
       <div class="contest-prizes">
         <?php if ( $rp_t ) : ?><div><small>Photo contest</small><b>First photo to <?php echo esc_html( number_format( $rp_t ) ); ?> stars wins</b></div><?php endif; ?>
-        <?php if ( $rp_w ) : ?><div><small>Voting contest</small><b>Voter #<?php echo esc_html( number_format( $rp_w ) ); ?> wins</b><small style="margin-top:4px;text-transform:none;letter-spacing:0"><?php echo esc_html( number_format( $rp_v ) ); ?> votes so far</small></div><?php endif; ?>
+        <?php if ( $rp_w ) : ?><div><small>Voting contest</small><b>Voter #<?php echo esc_html( number_format( $rp_w ) ); ?> <?php echo 'contest' === $rp_scope ? '' : 'on a photo '; ?>wins</b><small style="margin-top:4px;text-transform:none;letter-spacing:0"><?php echo esc_html( number_format( $rp_v ) ); ?> votes so far</small></div><?php endif; ?>
       </div>
       <?php endif; endif; ?>
       <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap"><a class="btn btn-white" href="<?php echo esc_url( home_url( '/rules' ) ); ?>">Contest rules</a></div>

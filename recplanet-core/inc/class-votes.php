@@ -107,9 +107,12 @@ class Votes {
 			$no      = 0;
 			// The voter number is handed out under a lock so two votes at the same instant never share one.
 			$locked = $contest ? (bool) $wpdb->get_var( "SELECT GET_LOCK('rp_voter_no', 3)" ) : false;
-			if ( $contest ) {
-				$no = 1 + max( (int) get_post_meta( $contest, 'rp_voter_start', true ), (int) $wpdb->get_var( $wpdb->prepare(
-					"SELECT COALESCE(MAX(v.voter_no), 0) FROM " . table( 'votes' ) . " v JOIN {$wpdb->postmeta} m ON m.post_id = v.photo_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d", $contest ) ) );
+			if ( $contest && 'contest' === get_post_meta( $contest, 'rp_voter_scope', true ) ) {
+				// One count across the whole contest.
+				$no = 1 + self::voters_so_far( $contest );
+			} elseif ( $contest ) {
+				// As on the old site: each photo counts its own voters, carrying on from the votes it arrived with.
+				$no = 1 + (int) get_post_meta( $id, 'rp_legacy_votes', true ) + (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . table( 'votes' ) . " WHERE photo_id = %d", $id ) );
 			}
 			$wpdb->query( $wpdb->prepare(
 				"INSERT INTO " . table( 'votes' ) . " (photo_id, user_id, voter_hash, value, voter_no, created_at) VALUES (%d, %d, %s, %d, %d, %s)
@@ -175,7 +178,21 @@ class Votes {
 		return $t;
 	}
 
-	/** Votes cast so far in a contest: the number the next voter gets, minus one. */
+	/** Every vote on a contest's photos, old site and new. */
+	public static function votes_in_contest( int $contest ): int {
+		global $wpdb;
+		$live = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . table( 'votes' ) . " v JOIN {$wpdb->postmeta} m ON m.post_id = v.photo_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d", $contest ) );
+		$old  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(CAST(l.meta_value AS UNSIGNED)), 0) FROM {$wpdb->postmeta} l JOIN {$wpdb->postmeta} m ON m.post_id = l.post_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d WHERE l.meta_key = 'rp_legacy_votes'", $contest ) );
+		return $live + $old;
+	}
+
+	/** The most voters any one photo in the contest has: how close the per-photo voting prize is. */
+	public static function top_voters( int $contest ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(MAX(CAST(v.meta_value AS UNSIGNED)), 0) FROM {$wpdb->postmeta} v JOIN {$wpdb->postmeta} m ON m.post_id = v.post_id AND m.meta_key = 'rp_contest_id' AND m.meta_value = %d WHERE v.meta_key = 'rp_votes'", $contest ) );
+	}
+
+	/** Contest-wide counting only: the number the next voter gets, minus one. */
 	public static function voters_so_far( int $contest ): int {
 		global $wpdb;
 		return max( (int) get_post_meta( $contest, 'rp_voter_start', true ), (int) $wpdb->get_var( $wpdb->prepare(
