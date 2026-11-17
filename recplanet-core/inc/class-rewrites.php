@@ -239,12 +239,16 @@ class Rewrites {
 		self::flags( $q, 'tax', $term );
 	}
 
-	/** A facility or activity term by slug. The two words URLs reserve are never terms. */
+	/**
+	 * An activity or facility term by slug. The two words URLs reserve are never terms. The activity wins when both
+	 * share a slug (swimming, playground, tennis…): the activity chips on place pages link by that slug and count by
+	 * activity, while the same-named facilities hold next to no parks, so the facility reading gave empty pages.
+	 */
 	public static function filter_term( string $slug ): ?\WP_Term {
 		if ( '' === $slug || in_array( $slug, [ 'page', 'county' ], true ) ) {
 			return null;
 		}
-		foreach ( [ TAX_FACILITY, TAX_ACTIVITY ] as $tax ) {
+		foreach ( [ TAX_ACTIVITY, TAX_FACILITY ] as $tax ) {
 			$t = get_term_by( 'slug', $slug, $tax );
 			if ( $t instanceof \WP_Term ) {
 				return $t;
