@@ -8,10 +8,11 @@ defined( 'ABSPATH' ) || exit;
  *   /{state}/{city}/{slug}     a US park, unchanged from the old site
  *   /{state}/{city}            city page (place term)
  *   /{state}/{city}/{facility} city page narrowed to a facility or activity (picnic-areas, fishing); also /{state}/{facility}
- *   /{state}/county/{county}   county page
+ *   /{state}/county/{county}   county page; /{state}/county/{county}/{facility} narrowed
  *   /{state}                   state page
  *   /world/{country}           country page
- *   /world/{country}/{slug}    a non-US park
+ *   /world/{country}/{slug}    a non-US park; else a province page; else the country narrowed to a facility or activity
+ *   /world/{country}/{province}/{facility}  a province page narrowed
  * Anything that 404s is looked up in rp_redirects and sent on with a 301.
  */
 class Rewrites {
@@ -33,15 +34,20 @@ class Rewrites {
 
 	public static function rules(): void {
 		$st = '([a-z]{2})';
-		// Pagination first, so "page" is never read as a city.
+		// Pagination first, so "page" is never read as a city; county rules before the city ones, so "county" is never read as a city.
 		add_rewrite_rule( "^world/([a-z]{2})/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country&paged=$matches[2]', 'top' );
+		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_state=$matches[2]&rp_filter=$matches[3]&rp_place_level=state&paged=$matches[4]', 'top' );
 		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_country=$matches[1]&rp_state=$matches[2]&rp_place_level=state&paged=$matches[3]', 'top' );
-		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_filter=$matches[3]&rp_place_level=city&paged=$matches[4]', 'top' );
+		add_rewrite_rule( "^$st/county/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_filter=$matches[3]&rp_place_level=county&paged=$matches[4]', 'top' );
 		add_rewrite_rule( "^$st/county/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county&paged=$matches[3]', 'top' );
+		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_filter=$matches[3]&rp_place_level=city&paged=$matches[4]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city&paged=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/page/([0-9]+)/?$", 'index.php?rp_state=$matches[1]&rp_place_level=state&paged=$matches[2]', 'top' );
+		// /world/{country}/{province}/{activity-or-facility}: a province page, narrowed.
+		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/([^/]+)/?$", 'index.php?rp_country=$matches[1]&rp_state=$matches[2]&rp_filter=$matches[3]&rp_place_level=state', 'top' );
 		add_rewrite_rule( "^world/([a-z]{2})/([^/]+)/?$", 'index.php?post_type=' . POST_PARK . '&rp_country=$matches[1]&name=$matches[2]', 'top' );
 		add_rewrite_rule( "^world/([a-z]{2})/?$", 'index.php?rp_country=$matches[1]&rp_place_level=country', 'top' );
+		add_rewrite_rule( "^$st/county/([^/]+)/([^/]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_filter=$matches[3]&rp_place_level=county', 'top' );
 		add_rewrite_rule( "^$st/county/([^/]+)/?$", 'index.php?rp_state=$matches[1]&rp_county=$matches[2]&rp_place_level=county', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/([^/]+)/?$", 'index.php?post_type=' . POST_PARK . '&rp_state=$matches[1]&rp_city=$matches[2]&name=$matches[3]', 'top' );
 		add_rewrite_rule( "^$st/([^/]+)/?$", 'index.php?rp_state=$matches[1]&rp_city=$matches[2]&rp_place_level=city', 'top' );
@@ -144,11 +150,11 @@ class Rewrites {
 				return;
 			}
 			$term = self::find_place( $level, $country, (string) $q->get( 'rp_state' ), (string) $q->get( 'rp_county' ), (string) $q->get( 'rp_city' ) );
-			// /{state}/{facility-or-activity}: the state page, narrowed.
-			if ( ! $term && 'city' === $level && ! $filter ) {
-				$f = self::filter_term( (string) $q->get( 'rp_city' ) );
+			// /{state}/{facility-or-activity}: the state page, narrowed; /world/{country}/{activity}/page/N: the country page, narrowed.
+			if ( ! $term && ! $filter && ( 'city' === $level || ( 'state' === $level && 'us' !== $country ) ) ) {
+				$f = self::filter_term( (string) $q->get( 'city' === $level ? 'rp_city' : 'rp_state' ) );
 				if ( $f ) {
-					$term   = self::find_place( 'state', $country, (string) $q->get( 'rp_state' ), '', '' );
+					$term   = 'city' === $level ? self::find_place( 'state', $country, (string) $q->get( 'rp_state' ), '', '' ) : self::find_place( 'country', $country, '', '', '' );
 					$filter = $f;
 				}
 			}
@@ -203,6 +209,14 @@ class Rewrites {
 				if ( $term ) {
 					$q->set( 'name', '' );
 					self::place_archive( $q, $term, null );
+					return;
+				}
+				// /world/{country}/{activity-or-facility}: the country page, narrowed.
+				$f    = self::filter_term( (string) $q->get( 'name' ) );
+				$term = $f ? self::find_place( 'country', strtolower( (string) $q->get( 'rp_country' ) ), '', '', '' ) : null;
+				if ( $term ) {
+					$q->set( 'name', '' );
+					self::place_archive( $q, $term, $f );
 					return;
 				}
 			}

@@ -11,15 +11,16 @@ if ( $is_search ) :
 	$rp_where  = 'title LIKE %s OR city LIKE %s';
 	$rp_has_q  = '' !== $rp_q;
 	$rp_n      = $rp_has_q ? rp_index_sum( $rp_where, [ $rp_like, $rp_like ] )['count'] : 0;
+	$rp_n_po   = $rp_has_q ? (int) $wp_query->found_posts : 0;
+	$rp_pages  = max( (int) ceil( $rp_n / $rp_per ), $rp_n_po ? (int) $wp_query->max_num_pages : 0 );
+	$rp_pg     = min( $rp_pg, max( 1, $rp_pages ) );     // ?pg= past the last page shows the last page, not "Page 4 of 3"
 	$rp_hits   = $rp_n ? rp_index_rows( $rp_where, [ $rp_like, $rp_like ], 'acres DESC', $rp_per, ( $rp_pg - 1 ) * $rp_per ) : [];
 	$rp_places = $rp_has_q ? get_terms( [ 'taxonomy' => 'rp_place', 'name__like' => $rp_q, 'hide_empty' => true, 'number' => 40, 'orderby' => 'count', 'order' => 'DESC' ] ) : [];
 	$rp_places = is_array( $rp_places ) ? $rp_places : [];
 	$rp_n_pl   = $rp_has_q ? (int) wp_count_terms( [ 'taxonomy' => 'rp_place', 'name__like' => $rp_q, 'hide_empty' => true ] ) : 0;
 	$rp_acts   = $rp_has_q ? get_terms( [ 'taxonomy' => 'rp_activity', 'name__like' => $rp_q, 'hide_empty' => true ] ) : [];
 	$rp_acts   = is_array( $rp_acts ) ? $rp_acts : [];
-	$rp_n_po   = $rp_has_q ? (int) $wp_query->found_posts : 0;
 	$rp_total  = $rp_n + $rp_n_pl + count( $rp_acts ) + $rp_n_po;
-	$rp_pages  = max( (int) ceil( $rp_n / $rp_per ), $rp_n_po ? (int) $wp_query->max_num_pages : 0 );
 	$rp_parts  = array_filter( [
 		$rp_n ? rp_count( $rp_n, 'place', 'places' ) : '',
 		$rp_n_pl ? rp_count( $rp_n_pl, 'city or state', 'cities and states' ) : '',
@@ -65,9 +66,9 @@ if ( $is_search ) :
     <div class="chips"><?php foreach ( $rp_acts as $p ) : ?><a class="chip" href="<?php echo esc_url( get_term_link( $p ) ); ?>"><?php echo esc_html( $p->name ); ?></a><?php endforeach; ?></div>
   <?php endif; ?>
 
-  <?php if ( $rp_has_q && have_posts() ) : ?>
+  <?php if ( $rp_has_q && have_posts() && max( 1, (int) get_query_var( 'paged' ) ) === $rp_pg ) : ?>
     <h2 class="h26" style="margin-top:28px">Posts and photos</h2>
-    <p class="note" style="margin:0 0 10px"><?php echo esc_html( rp_range_line( 'Posts and photos', $rp_pg, $rp_per, $rp_n_po ) ); ?>.</p>
+    <p class="note" style="margin:0 0 10px"><?php echo esc_html( rp_range_line( 'Posts and photos', $rp_pg, (int) get_query_var( 'posts_per_page' ), $rp_n_po ) ); ?>.</p>
     <div class="posts">
       <?php while ( have_posts() ) : the_post(); ?>
         <a class="post" href="<?php the_permalink(); ?>"><time><?php echo esc_html( get_the_date( 'j F Y' ) ); ?></time><h3><?php the_title(); ?></h3><p><?php echo esc_html( wp_trim_words( wp_strip_all_tags( get_the_content() ), 24 ) ); ?></p></a>

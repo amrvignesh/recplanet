@@ -114,11 +114,15 @@ add_action( 'pre_get_posts', function ( WP_Query $q ) {
 	}
 	// Search: places come from the index (index.php), so this query is the posts, pages, photos and contests only,
 	// paged by the same ?per= and ?pg= as the places list. Core's own "paged" would 404 a page with places but no posts.
+	// Jetpack Search answers this query: it serves at most 100 a page and 404s anything starting past the 1,000th
+	// result, which turned page 51 of the places into "Page not found". Past that depth the posts query stays on
+	// page 1, and index.php shows posts only when their page is the one asked for.
 	if ( $q->is_search() ) {
 		[ $per, $pg ] = rp_list_paging( 20 );
+		$per = min( 100, $per );
 		$q->set( 'post_type', [ 'post', 'page', 'rp_photo', 'rp_contest' ] );
 		$q->set( 'posts_per_page', $per );
-		$q->set( 'paged', $pg );
+		$q->set( 'paged', ( $pg - 1 ) * $per < 1000 ? $pg : 1 );
 	}
 	if ( $q->is_tax( [ 'rp_activity', 'rp_facility', 'rp_steward' ] ) ) {
 		$q->set( 'post_type', 'rp_park' );

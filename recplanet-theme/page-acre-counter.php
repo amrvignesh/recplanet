@@ -14,6 +14,13 @@ $names = [];
 foreach ( get_terms( [ 'taxonomy' => 'rp_place', 'hide_empty' => false, 'meta_key' => 'rp_level', 'meta_value' => 'country', 'number' => 300 ] ) as $t ) {
 	$names[ strtolower( (string) get_term_meta( $t->term_id, 'rp_code', true ) ) ?: $t->slug ] = $t->name;   // by country code: Canada's slug cannot be "ca" once California has it
 }
+// Province and region names outside the US, by the code the index stores (BC -> British Columbia).
+$provinces = [];
+$country_t = $sel_c && 'us' !== $sel_c ? RP\Rewrites::find_place( 'country', $sel_c, '', '', '' ) : null;
+foreach ( $country_t ? get_terms( [ 'taxonomy' => 'rp_place', 'parent' => $country_t->term_id, 'hide_empty' => false ] ) : [] as $t ) {
+	$provinces[ strtoupper( RP\Rewrites::url_slug( $t ) ) ] = $t->name;
+}
+$state_label = fn( string $code ): string => 'us' === $sel_c ? ( RP\us_states()[ $code ] ?? $code ) : ( $provinces[ $code ] ?? $code );
 $states = $sel_c ? $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n, COALESCE(SUM(acres),0) a FROM $idx WHERE country = %s AND state <> '' GROUP BY state ORDER BY a DESC", $sel_c ) ) : [];
 // A city, once a state is chosen: the select carries the city's URL slug; the stored name is found by matching the slug back.
 $sel_city  = RP\legacy_slug( sanitize_text_field( $_GET['city'] ?? '' ) );
@@ -25,7 +32,7 @@ foreach ( $cities as $c ) {
 		break;
 	}
 }
-$state_name = 'us' === $sel_c ? ( RP\us_states()[ $sel_s ] ?? $sel_s ) : $sel_s;
+$state_name = $state_label( $sel_s );
 $shown  = $world;
 $label  = 'the world';
 if ( $sel_c && $sel_s && '' !== $city_name ) {
@@ -68,7 +75,7 @@ $rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'cou
         </select></label>
         <?php if ( $states ) : ?>
         <label for="state">State or province<select id="state" name="state"><option value="">All of <?php echo esc_html( $names[ $sel_c ] ?? strtoupper( $sel_c ) ); ?></option>
-          <?php foreach ( $states as $s ) : ?><option value="<?php echo esc_attr( $s->state ); ?>"<?php selected( $sel_s, $s->state ); ?>><?php echo esc_html( 'us' === $sel_c ? ( RP\us_states()[ $s->state ] ?? $s->state ) : $s->state ); ?></option><?php endforeach; ?>
+          <?php foreach ( $states as $s ) : ?><option value="<?php echo esc_attr( $s->state ); ?>"<?php selected( $sel_s, $s->state ); ?>><?php echo esc_html( $state_label( $s->state ) ); ?></option><?php endforeach; ?>
         </select></label>
         <?php endif; ?>
         <?php if ( $cities ) : ?>
@@ -83,14 +90,14 @@ $rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'cou
 
   <section style="padding-top:0">
     <?php if ( $sel_c && $sel_s ) : ?>
-      <div class="section-head"><div><div class="eyebrow">Largest first</div><h2><?php echo esc_html( $label ); ?></h2></div><?php if ( '' !== $city_name && 'us' === $sel_c ) : ?><a class="btn btn-ghost" href="<?php echo esc_url( home_url( '/' . strtolower( $sel_s ) . '/' . $sel_city . '/' ) ); ?>">Open the city page</a><?php else : ?><a class="btn btn-ghost" href="<?php echo esc_url( 'us' === $sel_c ? home_url( '/' . strtolower( $sel_s ) . '/' ) : home_url( '/world/' . $sel_c . '/' ) ); ?>">Open the state page</a><?php endif; ?></div>
+      <div class="section-head"><div><div class="eyebrow">Largest first</div><h2><?php echo esc_html( $label ); ?></h2></div><?php if ( '' !== $city_name && 'us' === $sel_c ) : ?><a class="btn btn-ghost" href="<?php echo esc_url( home_url( '/' . strtolower( $sel_s ) . '/' . $sel_city . '/' ) ); ?>">Open the city page</a><?php else : ?><a class="btn btn-ghost" href="<?php echo esc_url( 'us' === $sel_c ? home_url( '/' . strtolower( $sel_s ) . '/' ) : home_url( '/world/' . $sel_c . '/' . strtolower( $sel_s ) . '/' ) ); ?>"><?php echo 'us' === $sel_c ? 'Open the state page' : 'Open the province page'; ?></a><?php endif; ?></div>
       <div class="plist"><div class="phd"><span>Place</span><span>Activities</span><span style="text-align:right">Acres</span></div><?php foreach ( $rows as $r ) { echo rp_park_row( $r ); } ?></div>
       <p class="note"><?php echo esc_html( rp_range_line( 'Places', $pg, $per, $total ) ); ?>, largest first. Every acre in the figure above is one of these.</p>
       <?php echo rp_query_pager( $pg, $pages ); ?>
     <?php elseif ( $sel_c ) : ?>
       <div class="section-head"><div><div class="eyebrow">By state or province</div><h2><?php echo esc_html( $label ); ?></h2></div></div>
       <div class="plist"><div class="phd"><span>State</span><span>Places</span><span style="text-align:right">Acres</span></div>
-        <?php foreach ( $states as $s ) : ?><a class="prow" href="<?php echo esc_url( add_query_arg( [ 'country' => $sel_c, 'state' => $s->state ], get_permalink() ) ); ?>"><span class="pname"><?php echo esc_html( 'us' === $sel_c ? ( RP\us_states()[ $s->state ] ?? $s->state ) : $s->state ); ?></span><span class="pacts"><span><?php echo esc_html( number_format( $s->n ) ); ?> places</span></span><span class="pac num"><?php echo esc_html( RP\format_acres( (float) $s->a ) ); ?></span></a><?php endforeach; ?>
+        <?php foreach ( $states as $s ) : ?><a class="prow" href="<?php echo esc_url( add_query_arg( [ 'country' => $sel_c, 'state' => $s->state ], get_permalink() ) ); ?>"><span class="pname"><?php echo esc_html( $state_label( $s->state ) ); ?></span><span class="pacts"><span><?php echo esc_html( number_format( $s->n ) ); ?> places</span></span><span class="pac num"><?php echo esc_html( RP\format_acres( (float) $s->a ) ); ?></span></a><?php endforeach; ?>
         <div class="prow total"><span class="pname">Total</span><span class="pacts"><span><?php echo esc_html( number_format( $shown['count'] ) ); ?> places</span></span><span class="pac num"><?php echo esc_html( RP\format_acres( $shown['acres'] ) ); ?></span></div>
       </div>
     <?php else : ?>
