@@ -25,6 +25,7 @@ require_once RP_CORE_DIR . 'inc/class-human-scale.php';
 require_once RP_CORE_DIR . 'inc/class-settings.php';
 require_once RP_CORE_DIR . 'inc/class-rest.php';
 require_once RP_CORE_DIR . 'inc/class-rewrites.php';
+require_once RP_CORE_DIR . 'inc/class-sitemaps.php';
 require_once RP_CORE_DIR . 'inc/class-votes.php';
 require_once RP_CORE_DIR . 'inc/class-freshness.php';
 require_once RP_CORE_DIR . 'inc/class-messages.php';
@@ -65,6 +66,7 @@ add_action( 'plugins_loaded', function () {
 	RP\Settings::init();
 	RP\Rest::init();
 	RP\Rewrites::init();
+	RP\Sitemaps::init();
 	RP\Votes::init();
 	RP\Freshness::init();
 	RP\Messages::init();

@@ -32,7 +32,20 @@ $per    = 50;
 $rows   = rp_index_rows( $where, $args, $order, $per, ( $paged - 1 ) * $per );
 $states = $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n FROM $idx WHERE ($where) AND country='us' AND state<>'' GROUP BY state ORDER BY n DESC LIMIT 12", $args ) );
 ?>
-<?php echo rp_crumbs( [ [ 'World', home_url( '/' ) ], [ ucfirst( str_replace( 'rp_', '', $tax ) ), home_url( '/' . ( 'rp_activity' === $tax ? 'activities' : ( 'rp_facility' === $tax ? 'facilities' : 'managed-by' ) ) ) ], [ $t->name, get_term_link( $t ) ] ] ); ?>
+<?php
+// The middle crumb is a page that exists: /facilities/ and /managed-by/ have no page of their own, so facilities go
+// to their list on the activities page and a steward to its level (City or town, County, Federal…).
+$crumbs = [ [ 'World', home_url( '/' ) ] ];
+if ( 'rp_activity' === $tax ) {
+	$crumbs[] = [ 'Activity', home_url( '/activities/' ) ];
+} elseif ( 'rp_facility' === $tax ) {
+	$crumbs[] = [ 'Facility', home_url( '/activities/#facilities' ) ];
+} elseif ( $t->parent && ( $lv = get_term( $t->parent, $tax ) ) instanceof WP_Term ) {
+	$crumbs[] = [ $lv->name, get_term_link( $lv ) ];
+}
+$crumbs[] = [ $t->name, get_term_link( $t ) ];
+echo rp_crumbs( $crumbs );
+?>
 <div class="wrap">
   <div class="phead">
     <div>

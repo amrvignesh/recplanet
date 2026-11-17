@@ -21,7 +21,7 @@ $facs = get_terms( [ 'taxonomy' => 'rp_facility', 'hide_empty' => true, 'orderby
     <?php endforeach; ?>
   </div>
   <?php if ( $facs ) : ?>
-  <h2 class="h26">Facilities</h2>
+  <h2 class="h26" id="facilities">Facilities</h2>
   <div class="chips" style="margin-bottom:48px">
     <?php foreach ( $facs as $f ) : ?><a class="chip" href="<?php echo esc_url( get_term_link( $f ) ); ?>"><?php echo esc_html( ucfirst( $f->name ) ); ?> <span class="n"><?php echo esc_html( number_format( $f->count ) ); ?></span></a><?php endforeach; ?>
   </div>
