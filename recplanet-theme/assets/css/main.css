@@ -665,3 +665,22 @@ body.admin-bar .trip{top:calc(94px + env(safe-area-inset-top,0px))}
 .contest-prizes div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:12px 14px}
 .contest-prizes small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
 .contest-prizes b{font-family:'Bricolage Grotesque',sans-serif;font-size:18px}
+
+/* ad units: nothing prints until code is saved under Settings › Ads */
+.ad{display:flex;justify-content:center;overflow:hidden}.ad.wide{margin:28px 0}
+/* the window after a vote */
+.vote-dlg{border:0;border-radius:18px;padding:0;max-width:min(680px,calc(100vw - 32px));background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.vote-dlg::backdrop{background:rgba(19,40,20,.55)}
+.vote-dlg[open]:has(.vd-ad){display:grid;grid-template-columns:1fr 300px}
+.vote-dlg .vd-main{padding:26px 28px;display:flex;flex-direction:column;gap:14px}
+.vote-dlg .vd-text{font-size:17px;line-height:1.5}.vote-dlg .vd-text p{margin:0 0 10px}.vote-dlg .vd-text p:last-child{margin-bottom:0}
+.vote-dlg .vd-text .win{background:var(--orange);color:#fff;padding:12px 14px;border-radius:12px}.vote-dlg .vd-text .win a{color:#fff}
+.vote-dlg .vd-text code{background:rgba(0,0,0,.2);padding:2px 8px;border-radius:6px;font-weight:800}
+.vote-dlg .vd-actions{display:flex;gap:10px;flex-wrap:wrap}
+.vote-dlg .vd-ad{padding:20px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;min-height:250px}
+@media (max-width:720px){.vote-dlg[open]:has(.vd-ad){grid-template-columns:1fr}}
+/* blog tags: the letter bar and the groups */
+.azbar{position:sticky;top:0;z-index:5;padding:10px 0;background:var(--bg);gap:6px}
+.azbar .chip{min-height:38px;padding:6px 12px;font-size:13px}
+.chip.off{opacity:.35;border-color:var(--line);pointer-events:none}
+.tag-group{margin-top:28px;scroll-margin-top:72px}.tag-group h2{font-size:22px;margin-bottom:10px}

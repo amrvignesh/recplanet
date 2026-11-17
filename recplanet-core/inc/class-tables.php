@@ -8,7 +8,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Tables {
 
-	const SCHEMA_VERSION = 7;
+	const SCHEMA_VERSION = 8;
 
 	public static function install(): void {
 		global $wpdb;
@@ -87,10 +87,13 @@ class Tables {
 			voter_hash char(40) NOT NULL DEFAULT '',
 			answer varchar(8) NOT NULL,
 			note text,
+			ip varchar(45) NOT NULL DEFAULT '',
+			ip_key varchar(45) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			read_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
-			KEY park (park_id,created_at)
+			KEY park (park_id,created_at),
+			KEY ip_key (ip_key)
 		) $charset;" );
 
 		// Contact form messages: the site keeps every one, the admin Inbox shows them, unread first.
@@ -103,10 +106,13 @@ class Tables {
 			park_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
 			voter_hash char(40) NOT NULL DEFAULT '',
+			ip varchar(45) NOT NULL DEFAULT '',
+			ip_key varchar(45) NOT NULL DEFAULT '',
 			created_at datetime NOT NULL,
 			read_at datetime DEFAULT NULL,
 			PRIMARY KEY  (id),
-			KEY unread (read_at,id)
+			KEY unread (read_at,id),
+			KEY ip_key (ip_key)
 		) $charset;" );
 
 		// Addresses that reached the site and matched nothing: the Missing links page turns them into redirects.

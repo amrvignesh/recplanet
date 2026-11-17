@@ -27,7 +27,7 @@ $chal = $site ? null : RP\Messages::challenge();
         <a class="chip<?php echo 'other' === $pre ? ' on' : ''; ?>" href="?about=other">Something else</a>
       </div>
       <div class="box" style="margin-top:22px"><h4>Other ways</h4>
-        <a class="row" href="https://www.facebook.com/pages/RecPlanet/127298557845" rel="noopener" target="_blank"><span>RecPlanet on Facebook</span><b>→</b></a>
+        <a class="row" href="<?php echo esc_url( RP\Settings::facebook_url() ); ?>" rel="noopener" target="_blank"><span>RecPlanet on Facebook</span><b>→</b></a>
         <a class="row" href="<?php echo esc_url( home_url( '/contest/' ) ); ?>"><span>Add a photo to a park instead</span><b>→</b></a>
         <p class="note" style="margin:6px 0 0">Every message reaches Taylor directly. Replies come from the address you give.</p>
       </div>

@@ -21,7 +21,7 @@
       </div>
       <div class="col"><h4>About</h4>
         <?php if ( has_nav_menu( 'footer-about' ) ) { wp_nav_menu( [ 'theme_location' => 'footer-about', 'container' => false, 'items_wrap' => '%3$s', 'depth' => 1 ] ); } else { ?>
-        <a href="<?php echo esc_url( home_url( '/about-us/' ) ); ?>">About us</a><a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>">Blog</a><a href="<?php echo esc_url( home_url( '/blog-tags/' ) ); ?>">Blog tags</a><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>">Contact us</a><a href="https://www.facebook.com/pages/RecPlanet/127298557845" rel="noopener" target="_blank">Facebook</a>
+        <a href="<?php echo esc_url( home_url( '/about-us/' ) ); ?>">About us</a><a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>">Blog</a><a href="<?php echo esc_url( home_url( '/blog-tags/' ) ); ?>">Blog tags</a><a href="<?php echo esc_url( home_url( '/contact/' ) ); ?>">Contact us</a><a href="<?php echo esc_url( RP\Settings::facebook_url() ); ?>" rel="noopener" target="_blank">Facebook</a>
         <?php } ?>
       </div>
       <div class="find"><h4>Find a park</h4>
@@ -42,6 +42,16 @@
 </footer>
 <?php if ( is_front_page() ) { get_template_part( 'template-parts/trail' ); } ?>
 <div id="congrats" class="congrats" hidden></div>
+<?php if ( is_singular( 'rp_photo' ) ) : ?>
+<dialog id="voteDlg" class="vote-dlg" data-msg="<?php echo esc_attr( RP\Settings::vote_message() ); ?>" aria-labelledby="voteDlgTitle">
+  <div class="vd-main">
+    <div class="eyebrow" id="voteDlgTitle">Thank you for voting</div>
+    <div class="vd-text"></div>
+    <div class="vd-actions"><a class="btn btn-ghost" href="<?php echo esc_url( RP\Settings::facebook_url() ); ?>" target="_blank" rel="noopener">Follow us on Facebook</a><button type="button" class="btn btn-orange vd-close">Keep voting</button></div>
+  </div>
+  <?php $rp_ad = rp_ad_slot( 'vote_dialog' ); if ( $rp_ad ) : ?><div class="vd-ad"><?php echo $rp_ad; ?></div><?php endif; ?>
+</dialog>
+<?php endif; ?>
 <?php wp_footer(); ?>
 </body>
 </html>

@@ -18,6 +18,11 @@ class Votes_Admin {
 		return array_values( array_filter( (array) get_option( 'rp_blocked_ips', [] ) ) );
 	}
 
+	/** A one-button form for block, unblock or remove, usable from the Inbox and Corrections pages as well. */
+	public static function action_form( string $do, string $ip, string $label, string $class = 'button button-small', string $confirm = '' ): string {
+		return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'rp_votes', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="rp_votes"><input type="hidden" name="do" value="' . esc_attr( $do ) . '"><input type="hidden" name="ip" value="' . esc_attr( $ip ) . '"><button class="' . esc_attr( $class ) . '"' . ( $confirm ? ' onclick="return confirm(\'' . esc_js( $confirm ) . '\')"' : '' ) . '>' . esc_html( $label ) . '</button></form>';
+	}
+
 	public static function page(): void {
 		global $wpdb;
 		$t    = table( 'votes' );
@@ -31,7 +36,7 @@ class Votes_Admin {
 			. number_format( $one( "SELECT COUNT(*) FROM $t" ) ) . ' votes on file from ' . number_format( $one( "SELECT COUNT(DISTINCT ip_key) FROM $t WHERE ip_key <> ''" ) ) . ' addresses; '
 			. number_format( $one( "SELECT COUNT(*) FROM $t WHERE legacy = 0 AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)" ) ) . ' new in the last day, '
 			. number_format( $one( "SELECT COUNT(*) FROM $t WHERE legacy = 0 AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY)" ) ) . ' in the last week.</p>';
-		$form = fn( string $do, string $ip, string $label, string $class = 'button button-small', string $confirm = '' ) => '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'rp_votes', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="rp_votes"><input type="hidden" name="do" value="' . esc_attr( $do ) . '"><input type="hidden" name="ip" value="' . esc_attr( $ip ) . '"><button class="' . esc_attr( $class ) . '"' . ( $confirm ? ' onclick="return confirm(\'' . esc_js( $confirm ) . '\')"' : '' ) . '>' . esc_html( $label ) . '</button></form>';
+		$form = fn( string $do, string $ip, string $label, string $class = 'button button-small', string $confirm = '' ) => self::action_form( $do, $ip, $label, $class, $confirm );
 
 		echo '<h2>Busiest addresses, last ' . (int) $days . ' days</h2><p><a href="' . esc_url( admin_url( 'admin.php?page=rp-votes&days=7' ) ) . '">7 days</a> · <a href="' . esc_url( admin_url( 'admin.php?page=rp-votes&days=30' ) ) . '">30 days</a> · <a href="' . esc_url( admin_url( 'admin.php?page=rp-votes&days=3650' ) ) . '">all time, old site included</a></p>';
 		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT ip_key, COUNT(*) votes, COUNT(DISTINCT photo_id) photos, COUNT(DISTINCT user_id) accounts, ROUND(AVG(value),1) avg_stars, SUM(legacy) old_votes, MIN(created_at) first_at, MAX(created_at) last_at FROM $t WHERE ip_key <> '' AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY) GROUP BY ip_key ORDER BY votes DESC LIMIT 40", $days ) );
@@ -82,7 +87,7 @@ class Votes_Admin {
 			if ( 'block' === $do ) {
 				$blocked[] = $ip;
 				update_option( 'rp_blocked_ips', array_values( array_unique( $blocked ) ), false );
-				$msg = "$ip is blocked from voting.";
+				$msg = "$ip is blocked: no votes and no messages from it.";
 			} elseif ( 'unblock' === $do ) {
 				update_option( 'rp_blocked_ips', array_values( array_diff( $blocked, [ $ip ] ) ), false );
 				$msg = "$ip can vote again.";
@@ -95,7 +100,9 @@ class Votes_Admin {
 				$msg = "$n votes from $ip removed and " . count( $photos ) . ' photos recounted.';
 			}
 		}
-		wp_safe_redirect( admin_url( 'admin.php?page=rp-votes&done=' . rawurlencode( $msg ) ) );
+		$back = (string) wp_get_referer();
+		$to   = $back && ( str_contains( $back, 'page=rp-inbox' ) || str_contains( $back, 'page=rp-corrections' ) ) ? remove_query_arg( 'done', $back ) : admin_url( 'admin.php?page=rp-votes' );
+		wp_safe_redirect( add_query_arg( 'done', rawurlencode( $msg ), $to ) );
 		exit;
 	}
 }

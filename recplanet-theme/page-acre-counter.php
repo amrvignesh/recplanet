@@ -15,25 +15,39 @@ foreach ( get_terms( [ 'taxonomy' => 'rp_place', 'hide_empty' => false, 'meta_ke
 	$names[ $t->slug ] = $t->name;
 }
 $states = $sel_c ? $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n, COALESCE(SUM(acres),0) a FROM $idx WHERE country = %s AND state <> '' GROUP BY state ORDER BY a DESC", $sel_c ) ) : [];
+// A city, once a state is chosen: the select carries the city's URL slug; the stored name is found by matching the slug back.
+$sel_city  = RP\legacy_slug( sanitize_text_field( $_GET['city'] ?? '' ) );
+$cities    = $sel_c && $sel_s ? $wpdb->get_results( $wpdb->prepare( "SELECT city, COUNT(*) n, COALESCE(SUM(acres),0) a FROM $idx WHERE country = %s AND state = %s AND city <> '' GROUP BY city ORDER BY city ASC", $sel_c, $sel_s ) ) : [];
+$city_name = '';
+foreach ( $cities as $c ) {
+	if ( '' !== $sel_city && RP\legacy_slug( $c->city ) === $sel_city ) {
+		$city_name = $c->city;
+		break;
+	}
+}
+$state_name = 'us' === $sel_c ? ( RP\us_states()[ $sel_s ] ?? $sel_s ) : $sel_s;
 $shown  = $world;
 $label  = 'the world';
-if ( $sel_c && $sel_s ) {
+if ( $sel_c && $sel_s && '' !== $city_name ) {
+	$shown = RP\Counter::get( 'city', "$sel_c/$sel_s/$sel_city" );
+	$label = $city_name . ', ' . $state_name;
+} elseif ( $sel_c && $sel_s ) {
 	$shown = RP\Counter::get( 'state', "$sel_c/$sel_s" );
-	$label = ( 'us' === $sel_c ? ( RP\us_states()[ $sel_s ] ?? $sel_s ) : $sel_s ) . ', ' . ( $names[ $sel_c ] ?? strtoupper( $sel_c ) );
+	$label = $state_name . ', ' . ( $names[ $sel_c ] ?? strtoupper( $sel_c ) );
 } elseif ( $sel_c ) {
 	$shown = RP\Counter::get( 'country', $sel_c );
 	$label = $names[ $sel_c ] ?? strtoupper( $sel_c );
 }
 $whole = floor( $shown['acres'] );
 $dec   = (int) round( ( $shown['acres'] - $whole ) * 100 );
-$rows  = $sel_c && $sel_s ? rp_index_rows( 'country = %s AND state = %s', [ $sel_c, $sel_s ], 'acres DESC', 100 ) : [];
+$rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'country = %s AND state = %s AND city = %s', [ $sel_c, $sel_s, $city_name ], 'acres DESC', 100 ) : rp_index_rows( 'country = %s AND state = %s', [ $sel_c, $sel_s ], 'acres DESC', 100 ) );
 ?>
 <div class="wrap">
   <div class="phead one">
     <div>
       <div class="eyebrow">Acre Counter</div>
       <h1>The one big number that goes up</h1>
-      <p class="lead" style="margin-top:14px">This is the acre counter. It counts the acres of public land from the website's database. You can see the world total, pick a country, and narrow it to a state or province. The world has too many negative counters, world population, national debt. It is time to have a positive one. The figure includes public land that is not strictly recreational, such as military bases.</p>
+      <p class="lead" style="margin-top:14px">This is the acre counter. It counts the acres of public land from the website's database. You can see the world total, pick a country, and narrow it to a state or province, then to a city. The world has too many negative counters, world population, national debt. It is time to have a positive one. The figure includes public land that is not strictly recreational, such as military bases.</p>
     </div>
   </div>
 
@@ -51,6 +65,11 @@ $rows  = $sel_c && $sel_s ? rp_index_rows( 'country = %s AND state = %s', [ $sel
           <?php foreach ( $states as $s ) : ?><option value="<?php echo esc_attr( $s->state ); ?>"<?php selected( $sel_s, $s->state ); ?>><?php echo esc_html( 'us' === $sel_c ? ( RP\us_states()[ $s->state ] ?? $s->state ) : $s->state ); ?></option><?php endforeach; ?>
         </select></label>
         <?php endif; ?>
+        <?php if ( $cities ) : ?>
+        <label for="city">City<select id="city" name="city"><option value="">All of <?php echo esc_html( $state_name ); ?></option>
+          <?php foreach ( $cities as $c ) : ?><option value="<?php echo esc_attr( RP\legacy_slug( $c->city ) ); ?>"<?php selected( $sel_city, RP\legacy_slug( $c->city ) ); ?>><?php echo esc_html( $c->city ); ?> (<?php echo esc_html( number_format( $c->n ) ); ?>)</option><?php endforeach; ?>
+        </select></label>
+        <?php endif; ?>
         <button class="btn btn-orange" type="submit">Count</button>
       </form>
     </div>
@@ -58,9 +77,9 @@ $rows  = $sel_c && $sel_s ? rp_index_rows( 'country = %s AND state = %s', [ $sel
 
   <section style="padding-top:0">
     <?php if ( $sel_c && $sel_s ) : ?>
-      <div class="section-head"><div><div class="eyebrow">Largest first</div><h2><?php echo esc_html( $label ); ?></h2></div><a class="btn btn-ghost" href="<?php echo esc_url( 'us' === $sel_c ? home_url( '/' . strtolower( $sel_s ) . '/' ) : home_url( '/world/' . $sel_c . '/' ) ); ?>">Open the state page</a></div>
+      <div class="section-head"><div><div class="eyebrow">Largest first</div><h2><?php echo esc_html( $label ); ?></h2></div><?php if ( '' !== $city_name && 'us' === $sel_c ) : ?><a class="btn btn-ghost" href="<?php echo esc_url( home_url( '/' . strtolower( $sel_s ) . '/' . $sel_city . '/' ) ); ?>">Open the city page</a><?php else : ?><a class="btn btn-ghost" href="<?php echo esc_url( 'us' === $sel_c ? home_url( '/' . strtolower( $sel_s ) . '/' ) : home_url( '/world/' . $sel_c . '/' ) ); ?>">Open the state page</a><?php endif; ?></div>
       <div class="plist"><div class="phd"><span>Place</span><span>Activities</span><span style="text-align:right">Acres</span></div><?php foreach ( $rows as $r ) { echo rp_park_row( $r ); } ?></div>
-      <p class="note">The first 100 places. Every acre in the figure above is one of these, or one of the rest on the state page.</p>
+      <p class="note">The first 100 places. Every acre in the figure above is one of these, or one of the rest on the <?php echo '' !== $city_name ? 'city' : 'state'; ?> page.</p>
     <?php elseif ( $sel_c ) : ?>
       <div class="section-head"><div><div class="eyebrow">By state or province</div><h2><?php echo esc_html( $label ); ?></h2></div></div>
       <div class="plist"><div class="phd"><span>State</span><span>Places</span><span style="text-align:right">Acres</span></div>

@@ -19,14 +19,14 @@ mk contact "Contact Us" page-contact.php ~/d6-import/text/contact-intro.html
 mk join "Join RecPlanet" page-join.php ~/d6-import/text/join-intro.html
 mk sign-in "Sign in" page-sign-in.php ~/d6-import/text/signin-intro.html
 wp rewrite flush --hard >/dev/null 2>&1
-wp edge-cache purge --domain=recplanet.wpcomstaging.com >/dev/null 2>&1
+wp edge-cache purge --domain=recplanet.com >/dev/null 2>&1
 for u in "/acre-counter/" "/blog-tags/" "/contact/" "/join/" "/sign-in/"; do
-  curl -sL -o /tmp/p.html "https://recplanet.wpcomstaging.com$u"
+  curl -sL -o /tmp/p.html "https://recplanet.com$u"
   echo "$u errs=$(grep -cE 'Fatal|Warning:' /tmp/p.html) h1=[$(grep -oE '<h1[^>]*>[^<]*' /tmp/p.html | head -1 | sed 's/<h1[^>]*>//')] form=$(grep -c 'id="contactForm"' /tmp/p.html) captcha=$(grep -c 'c_answer' /tmp/p.html)"
 done
 for u in "/acreage" "/blogtags" "/map/node" "/contact-us"; do
-  curl -s -o /dev/null -w "%{http_code} %{redirect_url} <- $u\n" "https://recplanet.wpcomstaging.com$u"
+  curl -s -o /dev/null -w "%{http_code} %{redirect_url} <- $u\n" "https://recplanet.com$u"
 done
-curl -sL -o /tmp/h.html "https://recplanet.wpcomstaging.com/?nocache=$RANDOM"
+curl -sL -o /tmp/h.html "https://recplanet.com/?nocache=$RANDOM"
 echo "home: surprise-in-hero=$(grep -c '>Surprise me<' /tmp/h.html) dice-in-menu=$(grep -c 'class="dice"' /tmp/h.html) tabbar-world=$(grep -c '>World</span>' /tmp/h.html)"
 echo "parks: $(wp post list --post_type=rp_park --format=count)"

@@ -16,7 +16,7 @@ $web     = get_post_meta( $id, 'rp_website', true );
 $acts    = wp_get_object_terms( $id, 'rp_activity', [ 'fields' => 'names' ] );
 $stew    = wp_get_object_terms( $id, 'rp_steward' );
 $stew_name = ''; $stew_level = ''; $stew_link = '';
-foreach ( $stew as $t ) { if ( $t->parent ) { $stew_name = $t->name; $stew_link = get_term_link( $t ); $stew_level = get_term( $t->parent )->name; } }
+foreach ( $stew as $t ) { if ( $t->parent || ( ! $stew_name && ! isset( RP\STEWARD_LEVELS[ $t->slug ] ) ) ) { $stew_name = $t->name; $stew_link = get_term_link( $t ); $stew_level = $t->parent ? get_term( $t->parent )->name : ''; } }
 $place   = rp_park_place_term( $id );
 $crumbs  = $place ? rp_place_crumbs( $place ) : [ [ 'World', home_url( '/' ) ] ];
 $crumbs[] = [ get_the_title(), get_permalink() ];
@@ -91,6 +91,7 @@ $city_term  = $place && 'city' === get_term_meta( $place->term_id, 'rp_level', t
     </div>
     <div class="side">
       <?php echo rp_park_ribbon( $id ); ?>
+      <?php echo rp_ad_slot( 'sidebar' ); ?>
       <?php if ( $in_city ) : ?>
       <div class="box"><h4>Also in <?php echo esc_html( $city ); ?></h4>
         <?php foreach ( $in_city as $r ) : ?><a class="row" href="<?php echo esc_url( get_permalink( (int) $r->post_id ) ); ?>"><span><?php echo esc_html( $r->title ); ?></span><b class="num"><?php echo null === $r->acres ? '' : esc_html( RP\format_acres( (float) $r->acres ) ); ?></b></a><?php endforeach; ?>
@@ -103,5 +104,6 @@ $city_term  = $place && 'city' === get_term_meta( $place->term_id, 'rp_level', t
       <?php endif; ?>
     </div>
   </section>
+  <?php echo rp_ad_slot( 'park_page_bottom', 'wide' ); ?>
 </div>
 <?php get_footer(); ?>

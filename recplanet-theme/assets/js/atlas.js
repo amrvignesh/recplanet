@@ -5,8 +5,8 @@
   if (!root || typeof maplibregl === 'undefined') return;
   var ACTS = RPc.acts || [], STW = { city: '#88B500', county: '#0FB8E6', state: '#FFE66D', federal: '#E85305', tribal: '#C77DFF', other: '#9FB095' };
   var start = {}; try { start = JSON.parse(root.getAttribute('data-start') || '{}'); } catch (e) {}
-  var state = { lens: root.getAttribute('data-activity') || '', stw: {}, minAc: 0, noPhoto: false, year: new Date().getFullYear(), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
-  Object.keys(STW).forEach(function (k) { state.stw[k] = true; });
+  var state = { acts: (root.getAttribute('data-activity') || '').split(',').filter(Boolean), stw: [], minAc: 0, noPhoto: false, year: new Date().getFullYear(), me: null, travelKm: 1.25, travelMode: 'walk', sel: null, placing: false, selecting: false };
+  try { state.stw = JSON.parse(root.getAttribute('data-steward') || '[]') || []; } catch (e) {}
   try { var saved = JSON.parse(localStorage.getItem('rp-me') || 'null'); if (saved) state.me = saved; } catch (e) {}
 
   var map = new maplibregl.Map({
@@ -34,11 +34,15 @@
   }
 
   var apiBase = RPc.rest + 'places';
+  /* Managed by: chosen stewards are levels (city, federal ...) or steward term ids, any of which may match. */
+  function stwKey(s) { return s.type === 'level' ? s.key : String(s.id); }
+  function stwParam() { return state.stw.length ? '&steward=' + state.stw.map(stwKey).join(',') : ''; }
+  /* Activity lens: any number of activities; a place shows when it has any of them. */
+  function actParam() { return state.acts.length ? '&activity=' + encodeURIComponent(state.acts.join(',')) : ''; }
+  function bbox(dp) { var b = map.getBounds(); return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map(function (v) { return v.toFixed(dp); }).join(','); }
   function params() {
-    var b = map.getBounds(), p = 'bbox=' + [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map(function (v) { return v.toFixed(4); }).join(',');
-    if (state.lens) p += '&activity=' + encodeURIComponent(state.lens);
-    var on = Object.keys(state.stw).filter(function (k) { return state.stw[k]; });
-    if (on.length < Object.keys(STW).length) p += '&steward=' + on.join(',');
+    var p = 'bbox=' + bbox(4);
+    p += actParam() + stwParam();
     if (state.minAc) p += '&min_acres=' + state.minAc;
     if (state.year < new Date().getFullYear()) p += '&year=' + state.year;
     if (state.noPhoto) p += '&no_photo=1';
@@ -48,7 +52,7 @@
   function load() {
     var id = ++lastReq;
     fetch(apiBase + '?' + params()).then(function (r) { return r.json(); }).then(function (d) {
-      if (id !== lastReq || !d.places) return;
+      if (id !== lastReq || !d.places || !map.getSource('parks')) return;
       places = d.places; inView = d.in_view;
       map.getSource('parks').setData({ type: 'FeatureCollection', features: places.map(function (p) { return { type: 'Feature', geometry: { type: 'Point', coordinates: [p.lng, p.lat] }, properties: { id: p.id, t: p.t, ac: p.ac === null ? 0 : p.ac, acn: p.ac === null ? 0 : 1, city: p.city, st: p.st, sw: p.sw, bits: p.bits, ph: p.ph, url: p.url, col: STW[p.sw] || STW.other } }; }) });
       panel();
@@ -102,8 +106,8 @@
   }
   function applyMode() {
     if (!map.getLayer('pt')) return;
-    map.setPaintProperty('pt', 'circle-radius', 6); map.setPaintProperty('pt', 'circle-color', state.lens ? '#FFB300' : '#88B500');
-    document.getElementById('legend').innerHTML = state.lens ? '<span><i style="background:#FFB300"></i>' + state.lens + '</span>' : '<span><i style="background:#88B500"></i>Places · a number is how many are grouped there</span>';
+    map.setPaintProperty('pt', 'circle-radius', 6); map.setPaintProperty('pt', 'circle-color', state.acts.length ? '#FFB300' : '#88B500');
+    document.getElementById('legend').innerHTML = state.acts.length ? '<span><i style="background:#FFB300"></i>' + state.acts.join(' or ') + '</span>' : '<span><i style="background:#88B500"></i>Places · a number is how many are grouped there</span>';
   }
   function km(a, b) { var R = 6371, dl = (b.lat - a.lat) * Math.PI / 180, dn = (b.lng - a.lng) * Math.PI / 180, x = Math.sin(dl / 2) * Math.sin(dl / 2) + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dn / 2) * Math.sin(dn / 2); return 2 * R * Math.asin(Math.sqrt(x)); }
   function mins(d) { var sp = state.travelMode === 'walk' ? 5 : state.travelMode === 'bike' ? 15 : 50; return Math.max(1, Math.round(d * 1.25 / sp * 60)); }
@@ -128,7 +132,7 @@
     document.getElementById('vN').textContent = fmt(inView.count); document.getElementById('vA').textContent = fmt(inView.acres);
     if (state.me) {
       title.textContent = 'Within reach'; note.textContent = 'Ordered by ' + state.travelMode + 'ing time from your point.';
-      fetch(RPc.rest + 'near?lat=' + state.me.lat + '&lng=' + state.me.lng + '&km=' + (state.travelKm * 2) + '&limit=20' + (state.lens ? '&activity=' + encodeURIComponent(state.lens) : '')).then(function (r) { return r.json(); }).then(function (rows) {
+      fetch(RPc.rest + 'near?lat=' + state.me.lat + '&lng=' + state.me.lng + '&km=' + (state.travelKm * 2) + '&limit=20' + actParam() + stwParam()).then(function (r) { return r.json(); }).then(function (rows) {
         body.innerHTML = rows.length ? rows.map(function (p) { return item(p, mins(p.km) + ' min ' + state.travelMode); }).join('') : '<div class="empty">Nothing on file within reach. Widen the travel time or move the point.</div>';
       });
       return;
@@ -139,17 +143,74 @@
   }
 
   /* controls */
-  var lens = document.getElementById('lens');
-  function setLens(v) { state.lens = v; Array.prototype.forEach.call(lens.querySelectorAll('.chip'), function (x) { x.classList.toggle('on', (x.getAttribute('data-a') || '') === v); }); applyMode(); load(); }
-  lens.addEventListener('click', function (e) { var b = e.target.closest('button.chip'); if (b) setLens(b.getAttribute('data-a') || ''); });
-  document.getElementById('lensMore').addEventListener('change', function () { if (this.value) setLens(this.value); });
-  if (state.lens) setLens(state.lens);
-  Array.prototype.forEach.call(document.querySelectorAll('.stw'), function (c) { c.addEventListener('change', function () { state.stw[c.value] = c.checked; load(); }); });
+  var lens = document.getElementById('lens'), lensMore = document.getElementById('lensMore');
+  function ensureChip(name) {
+    if (Array.prototype.some.call(lens.querySelectorAll('.chip'), function (x) { return x.getAttribute('data-a') === name; })) return;
+    var b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.setAttribute('data-a', name); b.textContent = name; lens.insertBefore(b, lensMore);
+  }
+  function paintLens() { Array.prototype.forEach.call(lens.querySelectorAll('.chip'), function (x) { var a = x.getAttribute('data-a') || ''; x.classList.toggle('on', a ? state.acts.indexOf(a) >= 0 : !state.acts.length); }); }
+  function toggleAct(name) {
+    if (!name) state.acts = [];
+    else { var i = state.acts.indexOf(name); if (i >= 0) state.acts.splice(i, 1); else { state.acts.push(name); ensureChip(name); } }
+    paintLens(); applyMode(); load();
+  }
+  lens.addEventListener('click', function (e) { var b = e.target.closest('button.chip'); if (b) toggleAct(b.getAttribute('data-a') || ''); });
+  lensMore.addEventListener('change', function () { if (this.value) { toggleAct(this.value); this.value = ''; } });
+  state.acts.forEach(ensureChip); paintLens();
+
+  /* Managed by: a type-ahead over the thousands of stewards and the six levels. Each pick becomes a chip; chips are OR-ed. */
+  var pick = document.getElementById('stwPick'), stwQ = document.getElementById('stwQ'), stwList = document.getElementById('stwList'), stwChips = document.getElementById('stwChips');
+  var sugg = [], hi = -1, stwReq = 0, stwTimer = 0;
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function stwColor(s) { return STW[s.type === 'level' ? s.key : s.level] || STW.other; }
+  function stwHas(s) { return state.stw.some(function (x) { return stwKey(x) === stwKey(s); }); }
+  function mark(label, q) { var i = q ? label.toLowerCase().indexOf(q.toLowerCase()) : -1; return i < 0 ? esc(label) : esc(label.slice(0, i)) + '<b>' + esc(label.slice(i, i + q.length)) + '</b>' + esc(label.slice(i + q.length)); }
+  function chips() {
+    stwChips.innerHTML = state.stw.map(function (s, i) { return '<span class="pchip"><i style="background:' + stwColor(s) + '"></i>' + esc(s.label) + (s.type === 'level' ? ' <small>all</small>' : '') + '<button type="button" data-i="' + i + '" aria-label="Remove ' + esc(s.label) + '">×</button></span>'; }).join('');
+    stwQ.placeholder = state.stw.length ? 'Add another…' : 'Type a city, agency or level…';
+  }
+  function openList(on) { stwList.hidden = !on; stwQ.setAttribute('aria-expanded', on ? 'true' : 'false'); if (!on) { hi = -1; stwQ.removeAttribute('aria-activedescendant'); } }
+  function suggest() {
+    var q = stwQ.value.trim(), id = ++stwReq;
+    fetch(RPc.rest + 'stewards?q=' + encodeURIComponent(q) + '&bbox=' + bbox(2)).then(function (r) { return r.json(); }).then(function (d) {
+      if (id !== stwReq || document.activeElement !== stwQ) return;
+      sugg = (d.items || []).filter(function (s) { return !stwHas(s); }); hi = -1;
+      var html = '', grp = '';
+      sugg.forEach(function (s, i) {
+        var g = s.type === 'level' ? 'By level' : (s.here ? 'In this view' : 'Everywhere');
+        if (g !== grp) { grp = g; html += '<li class="pick-grp" role="presentation">' + g + '</li>'; }
+        var meta = s.type === 'level' ? 'every ' + s.label.toLowerCase() + ' steward' : (s.here ? s.here.toLocaleString('en-US') + ' in view · ' : '') + s.n.toLocaleString('en-US') + ' places';
+        html += '<li role="option" id="stwOpt' + i + '" data-i="' + i + '" aria-selected="false"><i style="background:' + stwColor(s) + '"></i><span>' + mark(s.label, q) + '</span><small>' + meta + '</small></li>';
+      });
+      stwList.innerHTML = html || '<li class="pick-empty">' + (q ? 'No steward called “' + esc(q) + '”.' : 'Zoom in to see who manages places here.') + '</li>';
+      openList(true);
+    });
+  }
+  function move(d) {
+    var opts = stwList.querySelectorAll('[role=option]'); if (!opts.length) return;
+    hi = (hi + d + opts.length) % opts.length;
+    Array.prototype.forEach.call(opts, function (o, i) { o.classList.toggle('hi', i === hi); o.setAttribute('aria-selected', i === hi ? 'true' : 'false'); });
+    stwQ.setAttribute('aria-activedescendant', opts[hi].id); opts[hi].scrollIntoView({ block: 'nearest' });
+  }
+  function choose(i) { var s = sugg[i]; if (!s || stwHas(s)) return; state.stw.push(s); stwQ.value = ''; chips(); openList(false); load(); stwQ.focus(); }
+  stwQ.addEventListener('input', function () { clearTimeout(stwTimer); stwTimer = setTimeout(suggest, 160); });
+  stwQ.addEventListener('focus', function () { if (stwList.hidden) suggest(); });
+  stwQ.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (stwList.hidden) suggest(); else move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter') { if (sugg.length) { e.preventDefault(); choose(hi >= 0 ? hi : 0); } }
+    else if (e.key === 'Escape') { openList(false); }
+    else if (e.key === 'Backspace' && !stwQ.value && state.stw.length) { state.stw.pop(); chips(); load(); }
+  });
+  stwList.addEventListener('mousedown', function (e) { e.preventDefault(); var li = e.target.closest('[role=option]'); if (li) choose(parseInt(li.getAttribute('data-i'), 10)); });
+  stwChips.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.stw.splice(parseInt(b.getAttribute('data-i'), 10), 1); chips(); load(); stwQ.focus(); });
+  document.addEventListener('click', function (e) { if (!pick.contains(e.target)) openList(false); });
+  chips();
   document.getElementById('minac').addEventListener('input', function () { var v = parseInt(this.value, 10); state.minAc = v === 0 ? 0 : Math.round(Math.pow(10, v / 25)); document.getElementById('minacLbl').textContent = state.minAc.toLocaleString('en-US') + ' acres and up'; load(); });
   document.getElementById('nophoto').addEventListener('change', function () { state.noPhoto = this.checked; load(); });
   document.getElementById('travel').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.classList.remove('on'); }); b.classList.add('on'); state.travelKm = parseFloat(b.getAttribute('data-km')); state.travelMode = b.getAttribute('data-mode'); drawMe(); panel(); });
   document.getElementById('placeMe').addEventListener('click', function () { state.placing = !state.placing; this.classList.toggle('on', state.placing); map.getCanvas().style.cursor = state.placing ? 'crosshair' : ''; if (!state.placing) { state.me = null; try { localStorage.removeItem('rp-me'); } catch (x) {} drawMe(); panel(); } });
   document.getElementById('locateMe').addEventListener('click', function () { var b = this; if (!navigator.geolocation) return; b.textContent = 'Locating…'; navigator.geolocation.getCurrentPosition(function (pos) { state.me = { lat: pos.coords.latitude, lng: pos.coords.longitude }; try { localStorage.setItem('rp-me', JSON.stringify(state.me)); } catch (x) {} b.textContent = '◎ Located'; map.easeTo({ center: [state.me.lng, state.me.lat], zoom: 13 }); drawMe(); panel(); }, function () { b.textContent = 'Location unavailable'; }); });
   document.getElementById('selArea').addEventListener('click', function () { state.selecting = !state.selecting; this.classList.toggle('on', state.selecting); if (!state.selecting) { state.sel = null; drawSel(); panel(); } });
-  document.getElementById('shareView').addEventListener('click', function () { var c = map.getCenter(), u = RPc.home + 'atlas/?lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5) + '&zoom=' + map.getZoom().toFixed(1) + (state.lens ? '&activity=' + encodeURIComponent(state.lens) : ''); var b = this; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { b.textContent = '✓ Link copied'; }, function () { window.prompt('Copy this link', u); }); });
+  document.getElementById('shareView').addEventListener('click', function () { var c = map.getCenter(), u = RPc.home + 'atlas/?lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5) + '&zoom=' + map.getZoom().toFixed(1) + actParam() + stwParam(); var b = this; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { b.textContent = '✓ Link copied'; }, function () { window.prompt('Copy this link', u); }); });
 })();

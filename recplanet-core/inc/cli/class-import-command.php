@@ -34,6 +34,8 @@ defined( 'ABSPATH' ) || exit;
  *   wp recplanet approve  [--all | --activity=Hunting]
  *   wp recplanet rebuild                        index + roll-ups from scratch
  *   wp recplanet report                         data-quality counts
+ *   wp recplanet stewards                       put stewards saved without a level under their level
+ *   wp recplanet slugs [--dry-run]              parks whose slug is their post ID get one from their name, old address redirected
  */
 class Import_Command {
 
@@ -817,6 +819,49 @@ class Import_Command {
 		$n = Index::rebuild_all( fn( $done, $total ) => WP_CLI::log( "$done / $total" ) );
 		$w = Counter::get( 'world', 'world' );
 		WP_CLI::success( "$n parks indexed. Counter: " . \RP\format_acres( $w['acres'] ) . ' acres.' );
+	}
+
+	/** Put stewards saved without a level (the old checklist's "Add new") under their level and re-index their parks. */
+	public function stewards( array $args, array $assoc ): void {
+		[ $n, $merged ] = Taxonomies::repair_stewards( fn( $name, $id ) => WP_CLI::log( "$name -> #$id" ) );
+		WP_CLI::success( "$n stewards adopted, $merged of them merged into a steward already on file." );
+	}
+
+	/**
+	 * Parks whose slug is their own post ID (a draft saved before the name was typed) get a slug from their name;
+	 * the old address keeps working through a redirect.
+	 *
+	 * [--dry-run]
+	 * : List what would change without writing.
+	 */
+	public function slugs( array $args, array $assoc ): void {
+		global $wpdb;
+		$dry  = isset( $assoc['dry-run'] );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish' AND post_title <> '' AND post_name REGEXP '^[0-9]+$'", POST_PARK ) );
+		$n    = 0;
+		foreach ( $rows as $p ) {
+			$id = (int) $p->ID;
+			if ( '' !== (string) get_post_meta( $id, 'rp_legacy_path', true ) ) {
+				continue;        // the old site's path is the address; the slug is never shown
+			}
+			$slug = sanitize_title( $p->post_title );
+			if ( '' === $slug || ctype_digit( $slug ) ) {
+				continue;
+			}
+			$old  = trim( (string) wp_parse_url( get_permalink( $id ), PHP_URL_PATH ), '/' );
+			$slug = wp_unique_post_slug( $slug, $id, 'publish', POST_PARK, 0 );
+			$n++;
+			if ( $dry ) {
+				WP_CLI::log( "$id {$p->post_title}: /$old -> .../$slug" );
+				continue;
+			}
+			$wpdb->update( $wpdb->posts, [ 'post_name' => $slug ], [ 'ID' => $id ] );
+			clean_post_cache( $id );
+			$new = trim( (string) wp_parse_url( get_permalink( $id ), PHP_URL_PATH ), '/' );
+			Rewrites::add_redirect( $old, $new, 'slug' );
+			WP_CLI::log( "$id {$p->post_title}: /$old -> /$new" );
+		}
+		WP_CLI::success( $dry ? "$n parks would be renamed." : "$n parks renamed; their old addresses redirect." );
 	}
 
 	/** Data-quality counts for the editor. */

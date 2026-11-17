@@ -65,6 +65,10 @@ class Index {
 			if ( $t->parent ) {
 				$steward_term  = $t->term_id;
 				$steward_level = get_term( $t->parent )->slug;
+			} elseif ( ! $steward_term && ! array_key_exists( $t->slug, STEWARD_LEVELS ) ) {
+				// a steward saved without its level (Taxonomies::adopt_steward puts it right): count it under the level its name implies
+				$steward_term  = $t->term_id;
+				$steward_level = Taxonomies::classify_ownership( $t->name )[0];
 			}
 		}
 

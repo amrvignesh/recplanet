@@ -19,5 +19,5 @@ while true; do
   if [ -z "$N" ] || [ "$N" = "$LAST" ]; then echo "done at nid $LAST $(date)" >> "$LOG"; break; fi
   LAST=$N
 done
-$SSH "cd ~/htdocs && wp recplanet rebuild 2>&1 | tail -1 && wp recplanet report && wp edge-cache purge --domain=recplanet.wpcomstaging.com >/dev/null 2>&1" >> "$LOG" 2>&1
+$SSH "cd ~/htdocs && wp recplanet rebuild 2>&1 | tail -1 && wp recplanet report && wp edge-cache purge --domain=recplanet.com >/dev/null 2>&1" >> "$LOG" 2>&1
 echo "ALL DONE $(date)" >> "$LOG"

@@ -13,7 +13,7 @@ if ( 'rp_activity' === $tax ) {
 } elseif ( 'rp_steward' === $tax ) {
 	$where = 'steward_term = %d';
 	$args  = [ $t->term_id ];
-	if ( ! $t->parent ) {
+	if ( ! $t->parent && isset( RP\STEWARD_LEVELS[ $t->slug ] ) ) {
 		$where = 'steward_level = %s';
 		$args  = [ $t->slug ];
 	}
@@ -48,7 +48,8 @@ $states = $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n FROM $id
     <div class="facts">
       <div><span class="k">Places</span><span class="v num"><?php echo esc_html( number_format( $stats['count'] ) ); ?></span></div>
       <div><span class="k">Acres between them</span><span class="v num"><?php echo esc_html( RP\format_acres( $stats['acres'], 0 ) ); ?></span></div>
-      <div class="wide actions"><a class="btn btn-lime" href="<?php echo esc_url( add_query_arg( [ 'rp_activity' === $tax ? 'activity' : 'term' => $t->slug ], home_url( '/atlas' ) ) ); ?>">See them on the map</a></div>
+      <?php $rp_map = 'rp_activity' === $tax ? [ 'activity' => $t->name ] : ( 'rp_steward' === $tax ? [ 'steward' => $t->parent ? $t->term_id : $t->slug ] : [ 'term' => $t->slug ] ); ?>
+      <div class="wide actions"><a class="btn btn-lime" href="<?php echo esc_url( add_query_arg( $rp_map, home_url( '/atlas/' ) ) ); ?>">See them on the map</a></div>
     </div>
   </div>
   <section class="two" style="padding-top:10px">

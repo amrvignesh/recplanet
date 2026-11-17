@@ -233,3 +233,9 @@ function rp_page_link( string $base, int $page, string $sort = 'name' ): string 
 	$url = trailingslashit( $base ) . ( $page > 1 ? 'page/' . $page . '/' : '' );
 	return 'name' === $sort || '' === $sort ? $url : add_query_arg( 'sort', $sort, $url );
 }
+
+/** An ad unit, when code for that slot is saved under RecPlanet › Settings › Ads; an empty string otherwise. */
+function rp_ad_slot( string $slot, string $class = '' ): string {
+	$code = RP\Settings::ad( $slot );
+	return '' === $code ? '' : '<div class="ad ad-' . esc_attr( $slot ) . ( $class ? ' ' . esc_attr( $class ) : '' ) . '">' . $code . '</div>';
+}

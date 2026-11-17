@@ -33,6 +33,7 @@ class Freshness {
 		set_transient( $key, 1, 30 * DAY_IN_SECONDS );
 		$wpdb->insert( table( 'freshness' ), [
 			'park_id' => $id, 'user_id' => get_current_user_id(), 'voter_hash' => $hash, 'answer' => $answer,
+			'ip' => Votes::client_ip(), 'ip_key' => Votes::ip_key( Votes::client_ip() ),
 			'note' => sanitize_textarea_field( mb_substr( (string) $r['note'], 0, 2000 ) ), 'created_at' => current_time( 'mysql', true ),
 		] );
 		if ( 'yes' === $answer ) {

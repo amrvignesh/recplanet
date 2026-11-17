@@ -83,6 +83,11 @@ class Messages {
 		if ( $started && time() - $started < 4 ) {              // nobody writes a message in three seconds
 			return new \WP_REST_Response( [ 'error' => 'That was quick. Take a moment and send again.' ], 400 );
 		}
+		$ip     = Votes::client_ip();
+		$ip_key = Votes::ip_key( $ip );
+		if ( '' !== $ip_key && in_array( $ip_key, Votes_Admin::blocked(), true ) ) {
+			return new \WP_REST_Response( [ 'error' => 'Messages from this connection are not accepted.' ], 403 );
+		}
 		$hash = Votes::voter_hash();
 		$key  = 'rp_contact_rl_' . $hash;
 		if ( (int) get_transient( $key ) >= 5 ) {
@@ -103,7 +108,7 @@ class Messages {
 		set_transient( $key, (int) get_transient( $key ) + 1, HOUR_IN_SECONDS );
 		$wpdb->insert( table( 'messages' ), [
 			'name' => $name, 'email' => $email, 'subject' => $subject ?: 'Message', 'message' => $message, 'park_id' => $park,
-			'user_id' => get_current_user_id(), 'voter_hash' => $hash, 'created_at' => current_time( 'mysql', true ),
+			'user_id' => get_current_user_id(), 'voter_hash' => $hash, 'ip' => $ip, 'ip_key' => $ip_key, 'created_at' => current_time( 'mysql', true ),
 		] );
 		$to = get_option( 'rp_contact_email', '' ) ?: get_option( 'admin_email' );
 		wp_mail( $to, '[RecPlanet] ' . ( $subject ?: 'Message' ) . ' from ' . $name, "$message\n\nFrom: $name <$email>" . ( $park ? "\nAbout: " . get_the_title( $park ) . ' ' . get_permalink( $park ) : '' ) . "\n\nRead and reply in the site's Inbox: " . admin_url( 'admin.php?page=rp-inbox' ), [ 'Reply-To: ' . $name . ' <' . $email . '>' ] );
@@ -177,21 +182,41 @@ class Messages {
 		return $f . '<button class="button button-small" name="do" value="' . ( $read ? 'unread' : 'read' ) . '">' . ( $read ? 'Mark unread' : 'Mark read' ) . '</button> <button class="button-link-delete" name="do" value="delete" onclick="return confirm(\'Delete this?\')">Delete</button></form>';
 	}
 
+	/** The sender's address as the server saw it, with the Votes page's block button for those allowed to use it. */
+	private static function address( string $ip, string $ip_key ): string {
+		if ( '' === $ip ) {
+			return '<span class="description">not recorded</span>';
+		}
+		$blocked = in_array( $ip_key, Votes_Admin::blocked(), true );
+		$out     = '<code>' . esc_html( $ip ) . '</code>' . ( $blocked ? ' <strong style="color:#d63638">blocked</strong>' : '' );
+		if ( current_user_can( 'edit_rp_contests' ) ) {
+			$out .= '<br>' . Votes_Admin::action_form( $blocked ? 'unblock' : 'block', $ip_key, $blocked ? 'Unblock' : 'Block address' );
+		}
+		return $out;
+	}
+
+	private static function done_notice(): void {
+		if ( ! empty( $_GET['done'] ) ) {
+			echo '<div class="notice notice-success"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['done'] ) ) ) . '</p></div>';
+		}
+	}
+
 	public static function inbox(): void {
 		global $wpdb;
 		$rows = $wpdb->get_results( "SELECT * FROM " . table( 'messages' ) . " ORDER BY (read_at IS NULL) DESC, id DESC LIMIT 300" );
 		echo '<div class="wrap"><h1>Inbox <span class="title-count">' . (int) self::unread( 'message' ) . ' unread</span></h1>';
+		self::done_notice();
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'rp_msg', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="rp_msg"><input type="hidden" name="kind" value="message"><button class="button" name="do" value="readall">Mark all read</button></form><br>';
-		echo '<table class="widefat striped"><thead><tr><th style="width:150px">When</th><th>From</th><th>Subject</th><th>Message</th><th style="width:170px"></th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th style="width:150px">When</th><th>From</th><th>Subject</th><th>Message</th><th style="width:160px">Address</th><th style="width:170px"></th></tr></thead><tbody>';
 		foreach ( $rows as $m ) {
 			$unread = null === $m->read_at;
 			echo '<tr' . ( $unread ? ' style="font-weight:600;background:#fff8e5"' : '' ) . '><td>' . esc_html( $m->created_at ) . ( $unread ? '<br><span class="dashicons dashicons-marker" style="color:#E85305"></span> new' : '' ) . '</td>';
 			echo '<td>' . esc_html( $m->name ) . '<br><a href="mailto:' . esc_attr( $m->email ) . '?subject=' . rawurlencode( 'Re: ' . $m->subject ) . '">' . esc_html( $m->email ) . '</a></td>';
 			echo '<td>' . esc_html( $m->subject ) . ( $m->park_id ? '<br><a href="' . esc_url( get_edit_post_link( $m->park_id ) ) . '">' . esc_html( get_the_title( $m->park_id ) ) . '</a>' : '' ) . '</td>';
-			echo '<td style="white-space:pre-wrap;font-weight:400">' . esc_html( $m->message ) . '</td><td>' . self::buttons( 'message', (int) $m->id, ! $unread ) . '</td></tr>';
+			echo '<td style="white-space:pre-wrap;font-weight:400">' . esc_html( $m->message ) . '</td><td style="font-weight:400">' . self::address( (string) ( $m->ip ?? '' ), (string) ( $m->ip_key ?? '' ) ) . '</td><td>' . self::buttons( 'message', (int) $m->id, ! $unread ) . '</td></tr>';
 		}
 		if ( ! $rows ) {
-			echo '<tr><td colspan="5">No messages yet.</td></tr>';
+			echo '<tr><td colspan="6">No messages yet.</td></tr>';
 		}
 		echo '</tbody></table></div>';
 	}
@@ -201,17 +226,18 @@ class Messages {
 		$rows = $wpdb->get_results( "SELECT f.*, p.post_title FROM " . table( 'freshness' ) . " f JOIN {$wpdb->posts} p ON p.ID = f.park_id WHERE f.answer = 'no' ORDER BY (f.read_at IS NULL) DESC, f.id DESC LIMIT 300" );
 		$yes  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . table( 'freshness' ) . " WHERE answer = 'yes' AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)" );
 		echo '<div class="wrap"><h1>Corrections <span class="title-count">' . (int) self::unread( 'correction' ) . ' unread</span></h1>';
+		self::done_notice();
 		echo '<p>Visitors who tapped "Something changed" on a park. In the last 30 days, ' . $yes . ' visitors confirmed a park as still right.</p>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'rp_msg', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="rp_msg"><input type="hidden" name="kind" value="correction"><button class="button" name="do" value="readall">Mark all read</button></form><br>';
-		echo '<table class="widefat striped"><thead><tr><th style="width:150px">When</th><th>Park</th><th>What changed</th><th style="width:170px"></th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th style="width:150px">When</th><th>Park</th><th>What changed</th><th style="width:160px">Address</th><th style="width:170px"></th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			$unread = null === $r->read_at;
 			echo '<tr' . ( $unread ? ' style="font-weight:600;background:#fff8e5"' : '' ) . '><td>' . esc_html( $r->created_at ) . ( $unread ? '<br><span class="dashicons dashicons-marker" style="color:#E85305"></span> new' : '' ) . '</td>';
 			echo '<td><a href="' . esc_url( get_edit_post_link( $r->park_id ) ) . '">' . esc_html( $r->post_title ) . '</a><br><a href="' . esc_url( get_permalink( $r->park_id ) ) . '" target="_blank" style="font-weight:400">view</a></td>';
-			echo '<td style="white-space:pre-wrap;font-weight:400">' . esc_html( $r->note ?: '(no note)' ) . '</td><td>' . self::buttons( 'correction', (int) $r->id, ! $unread ) . '</td></tr>';
+			echo '<td style="white-space:pre-wrap;font-weight:400">' . esc_html( $r->note ?: '(no note)' ) . '</td><td style="font-weight:400">' . self::address( (string) ( $r->ip ?? '' ), (string) ( $r->ip_key ?? '' ) ) . '</td><td>' . self::buttons( 'correction', (int) $r->id, ! $unread ) . '</td></tr>';
 		}
 		if ( ! $rows ) {
-			echo '<tr><td colspan="4">No corrections yet.</td></tr>';
+			echo '<tr><td colspan="5">No corrections yet.</td></tr>';
 		}
 		echo '</tbody></table></div>';
 	}

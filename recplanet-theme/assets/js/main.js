@@ -200,6 +200,15 @@
       if (v && s.voter_no) { v.hidden = false; v.textContent = 'You are voter #' + fmt(s.voter_no) + '.'; }
       if (s.winner && s.code) { var c = $('#congrats'); if (c) { c.innerHTML = '<div class="wrap"><b>Congratulations!</b> You are voter #' + fmt(s.voter_no) + ' and win the voting contest. Your winning code is <code>' + s.code + '</code>. <a href="' + RPc.home + 'contact/?about=prize">Send it through the contact page</a> to receive the prize.</div>'; c.hidden = false; c.scrollIntoView({ block: 'center' }); } }
     }
+    /* the window after a vote: the voter number and the owner's message, a winner's code on top, an ad beside it when one is set */
+    function voteDialog(s) {
+      var d = $('#voteDlg'); if (!d || !s.voter_no) return;
+      var txt = (d.getAttribute('data-msg') || '').replace(/\{n\}/g, fmt(s.voter_no));
+      if (s.winner && s.code) txt = '<p class="win"><b>Congratulations!</b> You are voter #' + fmt(s.voter_no) + ' and win the voting prize. Your winning code is <code>' + s.code + '</code>. <a href="' + RPc.home + 'contact/?about=prize">Send it through the contact page</a> to claim it.</p>' + txt;
+      $('.vd-text', d).innerHTML = txt;
+      if (d.showModal) { if (!d.open) d.showModal(); } else d.setAttribute('open', '');
+      if (!d.getAttribute('data-shown')) { d.setAttribute('data-shown', '1'); if ($('ins.adsbygoogle', d)) { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {} } }
+    }
     api('photos/' + id + '/rating').then(function (s) { if (s && typeof s.score !== 'undefined') { paint(s.score, s.yours); race(s); cnt.innerHTML = '<b class="num">' + Number(s.score).toFixed(1) + '</b> from <b class="num">' + fmt(s.votes) + '</b> ratings' + (s.yours ? ' · yours: ' + s.yours : ''); } });
     btns.forEach(function (b, i) {
       b.addEventListener('mouseenter', function () { btns.forEach(function (x, j) { x.classList.toggle('hover', j <= i); }); });
@@ -207,7 +216,7 @@
       b.addEventListener('click', function () {
         api('photos/' + id + '/rating', { method: 'POST', body: { stars: i + 1 } }).then(function (s) {
           if (s.error) { cnt.textContent = s.error; return; }
-          paint(s.score, s.yours); race(s); cnt.innerHTML = '<b class="num">' + Number(s.score).toFixed(1) + '</b> from <b class="num">' + fmt(s.votes) + '</b> ratings · yours: ' + s.yours;
+          paint(s.score, s.yours); race(s); voteDialog(s); cnt.innerHTML = '<b class="num">' + Number(s.score).toFixed(1) + '</b> from <b class="num">' + fmt(s.votes) + '</b> ratings · yours: ' + s.yours;
         });
       });
     });
@@ -258,6 +267,13 @@
       });
       a.addEventListener('mouseleave', function () { wtip.hidden = true; });
     });
+  }
+
+  var vdlg = $('#voteDlg');
+  if (vdlg) {
+    var vdClose = function () { if (vdlg.close) vdlg.close(); else vdlg.removeAttribute('open'); };
+    $$('.vd-close', vdlg).forEach(function (b) { b.addEventListener('click', vdClose); });
+    vdlg.addEventListener('click', function (e) { if (e.target === vdlg) vdClose(); });
   }
 
   /* ---- the voter prize notice ---- */

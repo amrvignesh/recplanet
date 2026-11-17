@@ -14,20 +14,24 @@ class Taxonomies {
 	public static function init(): void {
 		add_action( 'init', [ __CLASS__, 'register' ] );
 		add_action( 'init', [ __CLASS__, 'seed_activities' ], 20 );
+		add_action( 'saved_' . TAX_STEWARD, [ __CLASS__, 'steward_saved' ], 10, 3 );
 	}
 
 	public static function register(): void {
 		register_taxonomy( TAX_ACTIVITY, POST_PARK, [
 			'labels' => self::labels( 'Activity', 'Activities' ), 'hierarchical' => false, 'public' => true,
 			'rewrite' => [ 'slug' => 'activities', 'with_front' => false ], 'show_in_rest' => true, 'show_admin_column' => true,
+			'meta_box_cb' => 'post_categories_meta_box', 'show_in_quick_edit' => false,   // a checklist as on the old site; Quick Edit's text box would wipe it
 		] );
 		register_taxonomy( TAX_FACILITY, POST_PARK, [
 			'labels' => self::labels( 'Facility', 'Facilities' ), 'hierarchical' => false, 'public' => true,
 			'rewrite' => [ 'slug' => 'facilities', 'with_front' => false ], 'show_in_rest' => true,
+			'meta_box_cb' => 'post_categories_meta_box', 'show_in_quick_edit' => false,
 		] );
 		register_taxonomy( TAX_STEWARD, POST_PARK, [
 			'labels' => self::labels( 'Steward', 'Stewards' ), 'hierarchical' => true, 'public' => true,
 			'rewrite' => [ 'slug' => 'managed-by', 'with_front' => false, 'hierarchical' => false ], 'show_in_rest' => true, 'show_admin_column' => true,
+			'meta_box_cb' => false, 'show_in_quick_edit' => false,   // thousands of names: Park_Admin's Managed by box finds one by typing
 		] );
 		register_taxonomy( TAX_PLACE, POST_PARK, [
 			'labels' => self::labels( 'Place', 'Places' ), 'hierarchical' => true, 'public' => true,
@@ -141,6 +145,79 @@ class Taxonomies {
 		return is_wp_error( $r ) ? $lid : (int) $r['term_id'];
 	}
 
+	/**
+	 * A steward saved with no level above it (the Stewards screen, or the old checklist's "Add new") goes under the
+	 * level its name implies, with the slug the importer would have given it, so the same name is never on file twice.
+	 */
+	public static function steward_saved( int $term_id, int $tt_id, bool $update ): void {
+		static $busy = false;
+		if ( $busy ) {
+			return;
+		}
+		$busy = true;
+		self::adopt_steward( $term_id );
+		$busy = false;
+	}
+
+	/**
+	 * Put a parentless steward under its level and re-index its parks. Returns the id the steward lives at afterwards:
+	 * the same term, re-parented and re-slugged, or the term that already had that name, when the parks moved across to
+	 * it. Level terms and stewards that already have a level are returned unchanged.
+	 */
+	public static function adopt_steward( int $term_id ): int {
+		$t = get_term( $term_id, TAX_STEWARD );
+		if ( ! $t instanceof \WP_Term || $t->parent || array_key_exists( $t->slug, STEWARD_LEVELS ) ) {
+			return $term_id;
+		}
+		[ $level ] = self::classify_ownership( $t->name );
+		$lt    = term_exists( $level, TAX_STEWARD );
+		$lid   = $lt ? (int) $lt['term_id'] : (int) wp_insert_term( STEWARD_LEVELS[ $level ], TAX_STEWARD, [ 'slug' => $level ] )['term_id'];
+		$slug  = legacy_slug( $level . '-' . $t->name );
+		$parks = get_objects_in_term( $term_id, TAX_STEWARD );
+		$parks = is_array( $parks ) ? array_map( 'intval', $parks ) : [];
+		$dup   = get_term_by( 'slug', $slug, TAX_STEWARD );
+		$into  = $dup instanceof \WP_Term && (int) $dup->term_id !== $term_id ? (int) $dup->term_id : 0;
+		if ( ! $into ) {
+			$r = wp_update_term( $term_id, TAX_STEWARD, [ 'parent' => $lid, 'slug' => $slug ] );
+			if ( is_wp_error( $r ) ) {
+				$ex   = term_exists( $t->name, TAX_STEWARD, $lid );        // same name already under that level with another slug
+				$into = $ex ? (int) $ex['term_id'] : 0;
+			}
+		}
+		if ( $into ) {
+			foreach ( $parks as $pid ) {
+				wp_set_object_terms( $pid, [ $into ], TAX_STEWARD );
+			}
+			wp_delete_term( $term_id, TAX_STEWARD );
+			$term_id = $into;
+		}
+		foreach ( $parks as $pid ) {
+			if ( 'publish' === get_post_status( $pid ) ) {
+				Index::upsert( $pid );
+			}
+		}
+		return $term_id;
+	}
+
+	/** Every parentless steward that is not a level, adopted. Returns [adopted, merged into an existing steward]. */
+	public static function repair_stewards( ?callable $log = null ): array {
+		$n = $merged = 0;
+		foreach ( get_terms( [ 'taxonomy' => TAX_STEWARD, 'parent' => 0, 'hide_empty' => false ] ) as $t ) {
+			if ( array_key_exists( $t->slug, STEWARD_LEVELS ) ) {
+				continue;
+			}
+			$n++;
+			$to = self::adopt_steward( (int) $t->term_id );
+			if ( $to !== (int) $t->term_id ) {
+				$merged++;
+			}
+			if ( $log ) {
+				$log( $t->name, $to );
+			}
+		}
+		return [ $n, $merged ];
+	}
+
 	/** "City of Irving" -> [city, City of Irving]; "Montgomery County" -> [county, ...]; etc. */
 	public static function classify_ownership( string $o ): array {
 		$o = trim( preg_replace( '/\s+/', ' ', $o ) );
@@ -152,6 +229,9 @@ class Taxonomies {
 		}
 		if ( preg_match( '/\bCounty\b|\bParish\b/i', $o ) ) {
 			return [ 'county', $o ];
+		}
+		if ( preg_match( '/\b(City|Town|Village|Borough|Township)$/i', $o ) ) {      // "Yeadon Borough", "Saginaw Charter Township"
+			return [ 'city', $o ];
 		}
 		if ( preg_match( '/^(State|Commonwealth) of /i', $o ) ) {
 			return [ 'state', $o ];

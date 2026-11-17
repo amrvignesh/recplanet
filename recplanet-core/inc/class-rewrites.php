@@ -253,6 +253,14 @@ class Rewrites {
 		return null;
 	}
 
+	/** True for /{state}/{city}/{slug} when the slug is a published park's: the one-hop target of a renamed park's redirect. */
+	private static function ends_in_park( string $bare ): bool {
+		if ( 2 !== substr_count( $bare, '/' ) ) {
+			return false;
+		}
+		return (bool) get_posts( [ 'post_type' => POST_PARK, 'name' => basename( $bare ), 'post_status' => 'publish', 'posts_per_page' => 1, 'fields' => 'ids' ] );
+	}
+
 	/** A published park by the path it had on the old site. */
 	public static function park_by_path( string $path ): int {
 		global $wpdb;
@@ -399,6 +407,14 @@ class Rewrites {
 		}
 		$path = rawurldecode( $path );
 		$path = (string) preg_replace( '#/(feed|track|rss\.xml)$#', '', $path );     // the old site's per-page feeds and "track" tabs
+		// /managed-by/city-of-austin: a steward asked for by its name rather than its slug (city-city-of-austin).
+		if ( preg_match( '#^managed-by/([^/]+)$#', $path, $m ) ) {
+			$t = self::steward_by_loose_slug( $m[1] );
+			if ( $t ) {
+				wp_redirect( get_term_link( $t ), 301 );
+				exit;
+			}
+		}
 		$to   = self::old_site_url( $path, $_GET );
 		if ( '' === $to ) {
 			$to = self::old_node_url( $path );
@@ -421,16 +437,36 @@ class Rewrites {
 		exit;
 	}
 
+	/** A steward whose slug is {level}-{this}, or whose name reads as this slug. */
+	public static function steward_by_loose_slug( string $slug ): ?\WP_Term {
+		global $wpdb;
+		$slug = sanitize_title( $slug );
+		if ( '' === $slug ) {
+			return null;
+		}
+		foreach ( array_keys( STEWARD_LEVELS ) as $level ) {
+			$t = get_term_by( 'slug', $level . '-' . $slug, TAX_STEWARD );
+			if ( $t instanceof \WP_Term && $t->parent ) {
+				return $t;
+			}
+		}
+		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT t.term_id FROM {$wpdb->terms} t JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id WHERE tt.taxonomy = %s AND tt.parent <> 0 AND LOWER(t.name) = %s ORDER BY tt.count DESC LIMIT 1", TAX_STEWARD, str_replace( '-', ' ', $slug ) ) );
+		$t  = $id ? get_term( $id, TAX_STEWARD ) : null;
+		return $t instanceof \WP_Term ? $t : null;
+	}
+
 	/** One hop only: a park path has no trailing slash, a search keeps its query, every other page ends with a slash. */
 	public static function canonical_path( string $to ): string {
 		if ( str_starts_with( $to, '/?' ) || str_contains( $to, '.xml' ) || '/' === $to ) {
 			return $to;
 		}
-		$bare = trim( $to, '/' );
-		if ( self::park_by_path( $bare ) ) {
-			return '/' . $bare;
+		[ $path, $query ] = array_pad( explode( '?', $to, 2 ), 2, '' );     // the slash goes on the path, never after a query string
+		$bare  = trim( $path, '/' );
+		$query = '' === $query ? '' : '?' . $query;
+		if ( self::park_by_path( $bare ) || self::ends_in_park( $bare ) ) {
+			return '/' . $bare . $query;
 		}
-		return '/' . $bare . '/';
+		return '/' . $bare . '/' . $query;
 	}
 
 	/** /node/N by the Drupal node id kept on every imported park, photo and post. */
@@ -484,9 +520,8 @@ class Rewrites {
 				}
 				return '/states/';
 			case 'multi-select':
-				$acts = (array) ( $get['actitivity'] ?? $get['activity'] ?? [] );
-				$a    = sanitize_text_field( reset( $acts ) ?: '' );
-				return '/atlas/' . ( $a ? '?activity=' . rawurlencode( $a ) : '' );
+				$acts = array_values( array_filter( array_map( fn( $x ) => sanitize_text_field( (string) $x ), (array) ( $get['actitivity'] ?? $get['activity'] ?? [] ) ) ) );
+				return '/atlas/' . ( $acts ? '?activity=' . rawurlencode( implode( ',', $acts ) ) : '' );
 			case 'united-states': return '/states/';
 			case 'world-parks':   return '/world/';
 			case 'photocontest':  return '/contest/';

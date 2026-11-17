@@ -5,7 +5,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RP_THEME_VERSION', '0.1.0' );
+define( 'RP_THEME_VERSION', '0.2.0' );
 define( 'RP_THEME_DIR', get_template_directory() );
 define( 'RP_THEME_URI', get_template_directory_uri() );
 
@@ -141,3 +141,8 @@ add_filter( 'wp_insert_post_data', function ( array $data ) {
 	}
 	return $data;
 } );
+
+/** Ad units: the loader once in the head when any slot has code; each slot prints where a template calls rp_ad_slot(). */
+add_action( 'wp_head', function () {
+	echo RP\Settings::ads_loader();
+}, 30 );
