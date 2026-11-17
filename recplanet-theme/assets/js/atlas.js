@@ -11,27 +11,14 @@
 
   var map = new maplibregl.Map({
     container: 'map',
-    style: 'https://tiles.openfreemap.org/styles/positron',
+    style: 'https://tiles.openfreemap.org/styles/liberty',   /* the detailed street map: parks drawn green and named, so a park with no dot shows */
     center: start.lng ? [start.lng, start.lat] : [-98.35, 39.5],
     zoom: start.zoom || 3.6,
     attributionControl: false
   });
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
   map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
   if (start.bbox) map.fitBounds([[start.bbox[0], start.bbox[1]], [start.bbox[2], start.bbox[3]]], { padding: 40, duration: 0 });
-
-  function brand() {
-    /* Tint the base map towards the brand: water in the sky blue, parks in the hill green, everything else quiet. */
-    var layers = map.getStyle().layers || [];
-    layers.forEach(function (l) {
-      var id = l.id.toLowerCase();
-      try {
-        if (l.type === 'fill' && /water/.test(id)) map.setPaintProperty(l.id, 'fill-color', '#BDEBF7');
-        if (l.type === 'fill' && /(park|wood|forest|grass|green|golf|cemetery)/.test(id)) map.setPaintProperty(l.id, 'fill-color', '#D9EBC4');
-        if (l.type === 'fill' && /(landuse|residential|background|land)/.test(id) && !/water|park/.test(id)) map.setPaintProperty(l.id, 'fill-color', '#F3F7EE');
-      } catch (e) {}
-    });
-  }
 
   var apiBase = RPc.rest + 'places';
   /* Managed by: chosen stewards are levels (city, federal ...) or steward term ids, any of which may match. */
@@ -60,7 +47,6 @@
   }
 
   map.on('load', function () {
-    brand();
     map.addSource('parks', { type: 'geojson', data: { type: 'FeatureCollection', features: [] }, cluster: true, clusterRadius: 48, clusterMaxZoom: 13 });
     map.addLayer({ id: 'cl-glow', type: 'circle', source: 'parks', filter: ['has', 'point_count'], paint: { 'circle-color': '#88B500', 'circle-opacity': 0.18, 'circle-radius': ['+', 22, ['*', 3, ['sqrt', ['get', 'point_count']]]] } });
     map.addLayer({ id: 'cl', type: 'circle', source: 'parks', filter: ['has', 'point_count'], paint: { 'circle-color': '#88B500', 'circle-radius': ['+', 14, ['*', 3, ['sqrt', ['get', 'point_count']]]], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
@@ -212,5 +198,7 @@
   document.getElementById('placeMe').addEventListener('click', function () { state.placing = !state.placing; this.classList.toggle('on', state.placing); map.getCanvas().style.cursor = state.placing ? 'crosshair' : ''; if (!state.placing) { state.me = null; try { localStorage.removeItem('rp-me'); } catch (x) {} drawMe(); panel(); } });
   document.getElementById('locateMe').addEventListener('click', function () { var b = this; if (!navigator.geolocation) return; b.textContent = 'Locating…'; navigator.geolocation.getCurrentPosition(function (pos) { state.me = { lat: pos.coords.latitude, lng: pos.coords.longitude }; try { localStorage.setItem('rp-me', JSON.stringify(state.me)); } catch (x) {} b.textContent = '◎ Located'; map.easeTo({ center: [state.me.lng, state.me.lat], zoom: 13 }); drawMe(); panel(); }, function () { b.textContent = 'Location unavailable'; }); });
   document.getElementById('selArea').addEventListener('click', function () { state.selecting = !state.selecting; this.classList.toggle('on', state.selecting); if (!state.selecting) { state.sel = null; drawSel(); panel(); } });
+  /* The same spot on Google Maps in a new tab, to compare what is on the ground with what is on file. Google's zoom is one more than MapLibre's. */
+  document.getElementById('openGoogle').addEventListener('click', function () { var c = map.getCenter(); window.open('https://www.google.com/maps/@' + c.lat.toFixed(6) + ',' + c.lng.toFixed(6) + ',' + Math.min(21, map.getZoom() + 1).toFixed(2) + 'z', '_blank', 'noopener'); });
   document.getElementById('shareView').addEventListener('click', function () { var c = map.getCenter(), u = RPc.home + 'atlas/?lat=' + c.lat.toFixed(5) + '&lng=' + c.lng.toFixed(5) + '&zoom=' + map.getZoom().toFixed(1) + actParam() + stwParam(); var b = this; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { b.textContent = '✓ Link copied'; }, function () { window.prompt('Copy this link', u); }); });
 })();

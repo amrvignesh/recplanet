@@ -438,11 +438,14 @@ body.trip-hiker .trip .sign line{stroke:#8A6A3F}
 .maplegend .l1{background:#DCEBBF}.maplegend .l2{background:#BEDB8A}.maplegend .l3{background:#9DCB57}.maplegend .l4{background:#7FB33A}.maplegend .l5{background:#5B9A2E}
 .maplegend span{margin:0 4px}
 .worldmap-wrap{background:var(--bg-2);padding-block:clamp(40px,5vw,70px)}
-.worldmap{position:relative}
-.worldmap svg{width:100%;height:auto;display:block;border-radius:18px;box-shadow:var(--shadow)}
-.worldmap .wdot circle{transition:r .2s}
-.worldmap .wdot:hover circle:last-of-type{stroke:#FFE66D;stroke-width:3}
-.worldmap .wdot:focus-visible circle{stroke:var(--orange);stroke-width:3}
+/* World Parks: the live map */
+.worldlive{position:relative;height:min(70vh,640px);min-height:420px;border-radius:18px;overflow:hidden;box-shadow:var(--shadow);background:#DCE9D2}
+#worldLive{position:absolute;inset:0}
+.worldlive .open{position:absolute;right:14px;top:14px;z-index:2}
+.worldlive .maplibregl-ctrl-top-left .maplibregl-ctrl{margin:14px 0 0 14px}
+.worldlive .maplibregl-ctrl-group button{width:40px;height:40px}
+.worldlive .maplibregl-popup-content{font-size:13px;line-height:1.35}
+@media (max-width:640px){.worldlive{height:62vh}.worldlive .open{top:auto;bottom:34px;right:10px}}
 h1.tag{font-weight:600;margin:0;letter-spacing:0}
 
 /* ---- the menu: icons, dropdowns, the acre chip, the phone tab bar ---- */

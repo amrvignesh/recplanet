@@ -7,7 +7,7 @@ get_header();
 $world = RP\Counter::get( 'world', 'world' );
 $start = [ 'lat' => 39.5, 'lng' => -98.35, 'zoom' => 3.6 ];
 if ( ! empty( $_GET['lat'] ) && ! empty( $_GET['lng'] ) ) {
-	$start = [ 'lat' => (float) $_GET['lat'], 'lng' => (float) $_GET['lng'], 'zoom' => 13 ];
+	$start = [ 'lat' => (float) $_GET['lat'], 'lng' => (float) $_GET['lng'], 'zoom' => isset( $_GET['zoom'] ) ? min( 18, max( 2, (float) $_GET['zoom'] ) ) : 13 ];
 } elseif ( ! empty( $_GET['place'] ) ) {
 	$t = get_term( (int) $_GET['place'], 'rp_place' );
 	if ( $t && ! is_wp_error( $t ) ) {
@@ -52,11 +52,11 @@ foreach ( array_filter( explode( ',', sanitize_text_field( $_GET['steward'] ?? '
     </div>
     <div><h4>Size</h4><label for="minac" class="visually-hidden">Minimum acres</label><input id="minac" type="range" min="0" max="100" value="0" style="width:100%;accent-color:var(--orange)"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)"><span>Any size</span><span id="minacLbl">0 acres and up</span></div></div>
     <div><h4>Contribute mode</h4><label class="ck"><input type="checkbox" id="nophoto">Only places with no photo yet</label><p class="note">See where a photo would fill a gap. Every one is a contest entry waiting to happen.</p></div>
-    <p class="note">Map data © OpenStreetMap contributors, tiles by OpenFreeMap. Every dot is a RecPlanet record.</p>
+    <p class="note">Zoom with the + and − buttons at the top left of the map, the mouse wheel, or two fingers. Map data © OpenStreetMap contributors, tiles by OpenFreeMap. Every dot is a RecPlanet record.</p>
   </aside>
   <div class="mapwrap" id="mapwrap">
     <div id="map" style="position:absolute;inset:0"></div>
-    <div class="tools"><button type="button" id="locateMe">◎ Locate me</button><button type="button" id="placeMe">✥ Put me here</button><button type="button" id="selArea">▭ Select an area</button><button type="button" id="shareView">⇪ Copy link to this view</button></div>
+    <div class="tools"><button type="button" id="locateMe">◎ Locate me</button><button type="button" id="placeMe">✥ Put me here</button><button type="button" id="selArea">▭ Select an area</button><button type="button" id="shareView">⇪ Copy link to this view</button><button type="button" id="openGoogle">↗ Open in Google Maps</button></div>
     <div class="legend" id="legend"></div>
   </div>
   <div class="rp" id="rp">

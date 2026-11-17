@@ -234,6 +234,35 @@ function rp_page_link( string $base, int $page, string $sort = 'name' ): string 
 	return 'name' === $sort || '' === $sort ? $url : add_query_arg( 'sort', $sort, $url );
 }
 
+/** Results per page and page number for lists paged by query arguments: ?per=20|50|100|200 and ?pg=N. */
+function rp_list_paging( int $default = 20 ): array {
+	$per = (int) ( $_GET['per'] ?? $default );
+	if ( ! in_array( $per, [ 20, 50, 100, 200 ], true ) ) {
+		$per = $default;
+	}
+	return [ $per, max( 1, (int) ( $_GET['pg'] ?? 1 ) ) ];
+}
+
+/** Previous / Page x of y / Next for a list paged by a query argument. Every other argument in the address is kept. */
+function rp_query_pager( int $page, int $pages, string $arg = 'pg' ): string {
+	if ( $pages < 2 ) {
+		return '';
+	}
+	$link = fn( int $p ) => esc_url( $p > 1 ? add_query_arg( $arg, $p ) : remove_query_arg( $arg ) );
+	$html = '<nav class="pager" aria-label="Pages">';
+	$html .= $page > 1 ? '<a href="' . $link( $page - 1 ) . '" rel="prev">← Previous</a>' : '<span></span>';
+	$html .= '<span>Page ' . number_format( $page ) . ' of ' . number_format( $pages ) . '</span>';
+	$html .= $page < $pages ? '<a href="' . $link( $page + 1 ) . '" rel="next">Next →</a>' : '<span></span>';
+	return $html . '</nav>';
+}
+
+/** "Places 21–40 of 1,180": where a page of a list sits in the whole. */
+function rp_range_line( string $what, int $page, int $per, int $total ): string {
+	$from = min( $total, ( $page - 1 ) * $per + 1 );
+	$to   = min( $total, $page * $per );
+	return $what . ' ' . number_format( $from ) . '–' . number_format( $to ) . ' of ' . number_format( $total );
+}
+
 /** An ad unit, when code for that slot is saved under RecPlanet › Settings › Ads; an empty string otherwise. */
 function rp_ad_slot( string $slot, string $class = '' ): string {
 	$code = RP\Settings::ad( $slot );

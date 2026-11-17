@@ -5,7 +5,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RP_THEME_VERSION', '0.2.0' );
+define( 'RP_THEME_VERSION', '0.3.0' );
 define( 'RP_THEME_DIR', get_template_directory() );
 define( 'RP_THEME_URI', get_template_directory_uri() );
 
@@ -59,6 +59,11 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_enqueue_script( 'maplibre', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', [], '4.7.1', true );
 		wp_enqueue_script( 'rp-atlas', RP_THEME_URI . '/assets/js/atlas.js', [ 'maplibre', 'rp-main' ], RP_THEME_VERSION, true );
 	}
+	if ( is_page_template( 'page-world.php' ) ) {
+		wp_enqueue_style( 'maplibre', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css', [], '4.7.1' );
+		wp_enqueue_script( 'maplibre', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', [], '4.7.1', true );
+		wp_enqueue_script( 'rp-world-map', RP_THEME_URI . '/assets/js/world-map.js', [ 'maplibre', 'rp-main' ], RP_THEME_VERSION, true );
+	}
 	if ( ! is_admin() ) {
 		wp_dequeue_style( 'wp-block-library' );
 		wp_dequeue_style( 'classic-theme-styles' );
@@ -106,6 +111,14 @@ add_action( 'wp_head', function () {
 add_action( 'pre_get_posts', function ( WP_Query $q ) {
 	if ( is_admin() || ! $q->is_main_query() ) {
 		return;
+	}
+	// Search: places come from the index (index.php), so this query is the posts, pages, photos and contests only,
+	// paged by the same ?per= and ?pg= as the places list. Core's own "paged" would 404 a page with places but no posts.
+	if ( $q->is_search() ) {
+		[ $per, $pg ] = rp_list_paging( 20 );
+		$q->set( 'post_type', [ 'post', 'page', 'rp_photo', 'rp_contest' ] );
+		$q->set( 'posts_per_page', $per );
+		$q->set( 'paged', $pg );
 	}
 	if ( $q->is_tax( [ 'rp_activity', 'rp_facility', 'rp_steward' ] ) ) {
 		$q->set( 'post_type', 'rp_park' );

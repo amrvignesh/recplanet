@@ -26,7 +26,7 @@ class Taxonomies {
 		register_taxonomy( TAX_FACILITY, POST_PARK, [
 			'labels' => self::labels( 'Facility', 'Facilities' ), 'hierarchical' => false, 'public' => true,
 			'rewrite' => [ 'slug' => 'facilities', 'with_front' => false ], 'show_in_rest' => true,
-			'meta_box_cb' => 'post_categories_meta_box', 'show_in_quick_edit' => false,
+			'meta_box_cb' => 'post_tags_meta_box', 'show_in_quick_edit' => false,   // typed, separated by commas, as the old site's Park Tags were
 		] );
 		register_taxonomy( TAX_STEWARD, POST_PARK, [
 			'labels' => self::labels( 'Steward', 'Stewards' ), 'hierarchical' => true, 'public' => true,

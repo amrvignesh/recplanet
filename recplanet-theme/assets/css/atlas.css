@@ -8,6 +8,9 @@
 .atlas2 .tools{position:absolute;right:14px;top:14px;display:flex;flex-direction:column;gap:6px}
 .atlas2 .tools button{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:12px;padding:8px 12px;border-radius:10px;border:0;background:#14211A;color:#fff;cursor:pointer;min-height:36px;box-shadow:0 8px 20px -10px rgba(0,0,0,.8);text-align:left}
 .atlas2 .tools button.on{background:var(--orange)}
+/* zoom buttons: top left, large enough to see and to tap */
+.atlas2 .maplibregl-ctrl-top-left .maplibregl-ctrl{margin:14px 0 0 14px}
+.atlas2 .maplibregl-ctrl-group button{width:40px;height:40px}
 .atlas2 .timebar{position:absolute;left:14px;right:14px;bottom:14px;background:#14211A;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;color:#fff;box-shadow:0 8px 20px -10px rgba(0,0,0,.8)}
 .atlas2 .timebar input[type=range]{flex:1;accent-color:var(--lime)}
 .atlas2 .timebar b{font-family:'Bricolage Grotesque',sans-serif;font-variant-numeric:tabular-nums;min-width:44px;text-align:center;font-size:16px}

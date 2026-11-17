@@ -233,7 +233,7 @@
     });
   }
 
-  /* ---- World Parks: the state choropleth and the world dots ---- */
+  /* ---- World Parks: the state choropleth (the live map above it is world-map.js) ---- */
   var usBox = $('#usmapBox');
   if (usBox) {
     var data = {}; try { data = JSON.parse(usBox.getAttribute('data-states') || '{}'); } catch (e) {}
@@ -257,18 +257,6 @@
     });
     if (!reduce) requestAnimationFrame(function () { svgm.classList.add('lit'); });
   }
-  var wm = $('#worldMap');
-  if (wm) {
-    var wtip = $('#worldTip');
-    $$('.wdot', wm).forEach(function (a) {
-      a.addEventListener('mousemove', function (e) {
-        wtip.innerHTML = '<b>' + a.getAttribute('data-name') + '</b><span>' + Number(a.getAttribute('data-n')).toLocaleString('en-US') + ' places · ' + a.getAttribute('data-a') + ' acres</span>';
-        wtip.hidden = false; var r = wm.getBoundingClientRect(); wtip.style.left = Math.min(r.width - 230, (e.clientX - r.left) + 14) + 'px'; wtip.style.top = ((e.clientY - r.top) - 10) + 'px';
-      });
-      a.addEventListener('mouseleave', function () { wtip.hidden = true; });
-    });
-  }
-
   var vdlg = $('#voteDlg');
   if (vdlg) {
     var vdClose = function () { if (vdlg.close) vdlg.close(); else vdlg.removeAttribute('open'); };

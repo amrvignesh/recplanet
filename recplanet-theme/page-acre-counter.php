@@ -12,7 +12,7 @@ $sel_s  = strtoupper( sanitize_text_field( $_GET['state'] ?? '' ) );
 $countries = $wpdb->get_results( "SELECT country, COUNT(*) n, COALESCE(SUM(acres),0) a FROM $idx WHERE country <> '' GROUP BY country ORDER BY a DESC" );
 $names = [];
 foreach ( get_terms( [ 'taxonomy' => 'rp_place', 'hide_empty' => false, 'meta_key' => 'rp_level', 'meta_value' => 'country', 'number' => 300 ] ) as $t ) {
-	$names[ $t->slug ] = $t->name;
+	$names[ strtolower( (string) get_term_meta( $t->term_id, 'rp_code', true ) ) ?: $t->slug ] = $t->name;   // by country code: Canada's slug cannot be "ca" once California has it
 }
 $states = $sel_c ? $wpdb->get_results( $wpdb->prepare( "SELECT state, COUNT(*) n, COALESCE(SUM(acres),0) a FROM $idx WHERE country = %s AND state <> '' GROUP BY state ORDER BY a DESC", $sel_c ) ) : [];
 // A city, once a state is chosen: the select carries the city's URL slug; the stored name is found by matching the slug back.
@@ -40,7 +40,13 @@ if ( $sel_c && $sel_s && '' !== $city_name ) {
 }
 $whole = floor( $shown['acres'] );
 $dec   = (int) round( ( $shown['acres'] - $whole ) * 100 );
-$rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'country = %s AND state = %s AND city = %s', [ $sel_c, $sel_s, $city_name ], 'acres DESC', 100 ) : rp_index_rows( 'country = %s AND state = %s', [ $sel_c, $sel_s ], 'acres DESC', 100 ) );
+// The places behind the figure, 100 to a page (?pg=N), so every one of them can be reached.
+$per   = 100;
+$total = (int) $shown['count'];
+$pages = max( 1, (int) ceil( $total / $per ) );
+$pg    = min( $pages, max( 1, (int) ( $_GET['pg'] ?? 1 ) ) );
+$off   = ( $pg - 1 ) * $per;
+$rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'country = %s AND state = %s AND city = %s', [ $sel_c, $sel_s, $city_name ], 'acres DESC, post_id ASC', $per, $off ) : rp_index_rows( 'country = %s AND state = %s', [ $sel_c, $sel_s ], 'acres DESC, post_id ASC', $per, $off ) );
 ?>
 <div class="wrap">
   <div class="phead one">
@@ -79,7 +85,8 @@ $rows  = ! ( $sel_c && $sel_s ) ? [] : ( '' !== $city_name ? rp_index_rows( 'cou
     <?php if ( $sel_c && $sel_s ) : ?>
       <div class="section-head"><div><div class="eyebrow">Largest first</div><h2><?php echo esc_html( $label ); ?></h2></div><?php if ( '' !== $city_name && 'us' === $sel_c ) : ?><a class="btn btn-ghost" href="<?php echo esc_url( home_url( '/' . strtolower( $sel_s ) . '/' . $sel_city . '/' ) ); ?>">Open the city page</a><?php else : ?><a class="btn btn-ghost" href="<?php echo esc_url( 'us' === $sel_c ? home_url( '/' . strtolower( $sel_s ) . '/' ) : home_url( '/world/' . $sel_c . '/' ) ); ?>">Open the state page</a><?php endif; ?></div>
       <div class="plist"><div class="phd"><span>Place</span><span>Activities</span><span style="text-align:right">Acres</span></div><?php foreach ( $rows as $r ) { echo rp_park_row( $r ); } ?></div>
-      <p class="note">The first 100 places. Every acre in the figure above is one of these, or one of the rest on the <?php echo '' !== $city_name ? 'city' : 'state'; ?> page.</p>
+      <p class="note"><?php echo esc_html( rp_range_line( 'Places', $pg, $per, $total ) ); ?>, largest first. Every acre in the figure above is one of these.</p>
+      <?php echo rp_query_pager( $pg, $pages ); ?>
     <?php elseif ( $sel_c ) : ?>
       <div class="section-head"><div><div class="eyebrow">By state or province</div><h2><?php echo esc_html( $label ); ?></h2></div></div>
       <div class="plist"><div class="phd"><span>State</span><span>Places</span><span style="text-align:right">Acres</span></div>

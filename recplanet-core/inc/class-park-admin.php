@@ -36,7 +36,7 @@ class Park_Admin {
 		add_filter( 'redirect_post_location', [ __CLASS__, 'redirect' ], 10, 2 );
 		add_action( 'admin_notices', [ __CLASS__, 'notices' ] );
 		add_filter( 'enter_title_here', fn( $t, $post ) => POST_PARK === $post->post_type ? 'Park name (required)' : $t, 10, 2 );
-		add_filter( 'wp_terms_checklist_args', fn( $a ) => in_array( $a['taxonomy'] ?? '', [ TAX_ACTIVITY, TAX_FACILITY ], true ) ? array_merge( $a, [ 'checked_ontop' => false ] ) : $a );
+		add_filter( 'wp_terms_checklist_args', fn( $a ) => TAX_ACTIVITY === ( $a['taxonomy'] ?? '' ) ? array_merge( $a, [ 'checked_ontop' => false ] ) : $a );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'assets' ] );
 		add_action( 'rest_api_init', [ __CLASS__, 'routes' ] );
 		add_filter( 'wp_insert_post_data', [ __CLASS__, 'slug_data' ], 10, 2 );
@@ -50,7 +50,7 @@ class Park_Admin {
 		wp_enqueue_style( 'maplibre', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css', [], '4.7.1' );
 		wp_enqueue_script( 'maplibre', 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js', [], '4.7.1', true );
 		wp_add_inline_script( 'maplibre', self::picker_js() );
-		wp_add_inline_style( 'wp-admin', '#rp_activity-adder,#rp_activity-tabs{display:none}#rp_activity-all,#rp_facility-all{max-height:420px}'
+		wp_add_inline_style( 'wp-admin', '#rp_activity-adder,#rp_activity-tabs{display:none}#rp_activity-all{max-height:420px}'
 			. '#rpMapWrap label{display:block;font-weight:600;margin-bottom:3px}#rpMap{height:340px;border:1px solid #c3c4c7;border-radius:4px;background:#eef3ea}#rpMapBar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}#rpMapMsg{margin:0;color:#646970;font-size:12px}' );
 	}
 
@@ -186,7 +186,7 @@ recenter();
 /* the map */
 if(typeof maplibregl==='undefined'){say('The map library did not load. Type the coordinates by hand.',true);return;}
 var el=document.getElementById('rpMap'),c=cfg.center||{lat:39.5,lng:-98.35,zoom:3.6},has=typeof cfg.lat==='number'&&typeof cfg.lng==='number';
-var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/positron',center:has?[cfg.lng,cfg.lat]:[c.lng,c.lat],zoom:has?15:c.zoom,attributionControl:false});
+var map=new maplibregl.Map({container:el,style:'https://tiles.openfreemap.org/styles/liberty',center:has?[cfg.lng,cfg.lat]:[c.lng,c.lat],zoom:has?15:c.zoom,attributionControl:false});
 map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
 map.addControl(new maplibregl.AttributionControl({compact:true}));
 var pin=null;
@@ -319,7 +319,7 @@ JS
 		$countries = self::countries();
 		$states    = us_states();
 		echo '<style>.rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 18px;margin-top:8px}.rp-grid label{display:block;font-weight:600;margin-bottom:3px}.rp-grid .req{color:#d63638}.rp-grid input,.rp-grid select{width:100%}.rp-grid p{margin:4px 0 0;color:#646970;font-size:12px}.rp-wide{grid-column:1/-1}</style>';
-		echo '<p>Fields marked <span style="color:#d63638">*</span> are required; a park cannot be published without them. Activities, facilities and who manages it (Managed by) are in the boxes to the right; the description is the editor above; the photo is the featured image.</p><div class="rp-grid">';
+		echo '<p>Fields marked <span style="color:#d63638">*</span> are required; a park cannot be published without them. Activities and who manages it (Managed by) are in the boxes to the right. Facilities are tags: type them in the Facilities box separated by commas (playgrounds, boat ramps), and pick from the suggestions when one appears. The description is the editor above; the photo is the featured image.</p><div class="rp-grid">';
 		foreach ( self::fields() as $key => [ $label, $type, $req, $help ] ) {
 			$id   = esc_attr( $key );
 			$star = $req ? ' <span class="req" aria-hidden="true">*</span>' : '';
